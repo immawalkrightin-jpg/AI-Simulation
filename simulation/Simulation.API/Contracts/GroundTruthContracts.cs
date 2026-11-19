@@ -6,7 +6,9 @@ public sealed record CountryDto(
     float X,
     float Y,
     double Supplies,
-    double Ammunition);
+    double Ammunition,
+    string Bloc,
+    bool IsModel);
 
 public sealed record UnitDto(
     int Id,
@@ -39,6 +41,19 @@ public sealed record EventDto(
     string Kind,
     string Description);
 
+public sealed record InteractionDto(
+    int Id,
+    string Kind,
+    string Source,
+    string Target,
+    string Mode,
+    string Status,
+    double Cargo,
+    string Subject,
+    long StartTick,
+    long DueTick,
+    long? EndTick);
+
 public sealed record GroundTruthSnapshot(
     long Tick,
     double ElapsedSeconds,
@@ -48,6 +63,7 @@ public sealed record GroundTruthSnapshot(
     IReadOnlyList<UnitDto> Units,
     IReadOnlyList<RelationDto> Relations,
     IReadOnlyList<SensorDto> Sensors,
-    IReadOnlyList<EventDto> Events);
+    IReadOnlyList<EventDto> Events,
+    IReadOnlyList<InteractionDto> Interactions);
 
 public sealed record SimulationStatus(long Tick, bool Paused);

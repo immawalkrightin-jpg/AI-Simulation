@@ -5,10 +5,30 @@ import { drawSymbol } from "../units/symbols.js";
 const INK = "#ecece9";
 const MID = "#9a9da1";
 const RED = "#ff2b2b";
-const TONES = ["#f2f2f0", "#9ea2a6", "#cfd2d4", "#7d8185"];
-const HOSTILE = /hostile|tense|war|deteriorat|conflict|rival/i;
+const WHITE_RGB = "236,236,233";
+const RED_RGB = "255,43,43";
+const BLOC_TONE = { East: "#ff6a63", West: "#f2f2f0", NonAligned: "#9a9da1" };
+const BLOC_FILL = {
+  East: "rgba(255,43,43,0.11)",
+  West: "rgba(236,236,233,0.075)",
+  NonAligned: "rgba(154,157,161,0.08)",
+  none: "rgba(154,157,161,0.03)"
+};
+const BLOC_BORDER = {
+  East: "rgba(255,106,99,0.55)",
+  West: "rgba(236,236,233,0.5)",
+  NonAligned: "rgba(154,157,161,0.5)",
+  none: "rgba(154,157,161,0.16)"
+};
+const MODE_DASH = { Ground: [], Naval: [2, 5], Air: [12, 6], None: [6, 6] };
 const FONT = '11px "Barlow Semi Condensed", "Arial Narrow", sans-serif';
 const TRAIL_LENGTH = 24;
+const FADE_TICKS = 8;
+const DETAIL_ZOOM = 1.8;
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 8;
+
+const tint = (rgb, alpha) => `rgba(${rgb},${alpha})`;
 
 export class MapRenderer {
   constructor(canvas, onSelect) {
@@ -18,8 +38,9 @@ export class MapRenderer {
     this.projection = new Projection();
     this.snapshot = null;
     this.terrain = null;
+    this.map = null;
+    this.countryIndex = new Map();
     this.units = new Map();
-    this.tones = new Map();
     this.selected = null;
     this.interval = 1000;
     this.lastSnapshotAt = 0;
@@ -60,7 +81,7 @@ export class MapRenderer {
       (event) => {
         event.preventDefault();
         const zoom = this.projection.zoom * Math.exp(-event.deltaY * 0.001);
-        this.projection.zoom = Math.min(4, Math.max(0.5, zoom));
+        this.projection.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
       },
       { passive: false }
     );
@@ -76,13 +97,17 @@ export class MapRenderer {
     this.projection.resize(width, height);
   }
 
+  setMap(map) {
+    this.map = map && Array.isArray(map.entities) ? map : null;
+  }
+
   setSnapshot(snapshot) {
     const now = performance.now();
     if (!this.terrain) {
       this.projection.setWorld(snapshot.width, snapshot.height);
       this.terrain = buildTerrain(snapshot);
-      snapshot.countries.forEach((country, index) => this.tones.set(country.id, TONES[index % TONES.length]));
     }
+    this.countryIndex = new Map(snapshot.countries.map((country) => [country.id, country]));
     if (this.lastSnapshotAt > 0) {
       this.interval = Math.min(5000, Math.max(100, now - this.lastSnapshotAt));
     }
@@ -118,6 +143,11 @@ export class MapRenderer {
     this.snapshot = snapshot;
   }
 
+  toneOf(owner) {
+    const country = this.countryIndex.get(owner);
+    return (country && BLOC_TONE[country.bloc]) || INK;
+  }
+
   frame(now) {
     requestAnimationFrame((next) => this.frame(next));
     const ctx = this.ctx;
@@ -128,9 +158,17 @@ export class MapRenderer {
     }
     const P = (x, y, z = 0) => pr.project(x, y, z);
     this.drawGrid(P);
-    this.drawContours(P);
+    const land = this.map ? this.buildLand(P) : null;
+    if (land) {
+      this.drawLand(land);
+    }
+    this.drawContours(P, land);
+    if (land) {
+      this.drawCoast(land);
+    }
     this.drawSensors(P, now);
-    this.drawRelations(P, now);
+    this.drawRelations(P);
+    this.drawInteractions(P, now);
     this.drawUnits(P, now);
     this.drawCountries(P, now);
     this.drawReticle(P, now);
@@ -148,6 +186,58 @@ export class MapRenderer {
         ctx.lineTo(p.x, p.y);
       }
     }
+  }
+
+  buildLand(P) {
+    const all = new Path2D();
+    const parts = [];
+    for (const entity of this.map.entities) {
+      if (entity.name === "ATA") {
+        continue;
+      }
+      const path = new Path2D();
+      for (const ring of entity.rings) {
+        for (let i = 0; i < ring.length; i += 2) {
+          const p = P(ring[i], ring[i + 1], 0);
+          if (i === 0) {
+            path.moveTo(p.x, p.y);
+          } else {
+            path.lineTo(p.x, p.y);
+          }
+        }
+        path.closePath();
+      }
+      all.addPath(path);
+      parts.push({ entity, path });
+    }
+    return { all, parts };
+  }
+
+  drawLand(land) {
+    const ctx = this.ctx;
+    for (const { entity, path } of land.parts) {
+      ctx.fillStyle = BLOC_FILL[entity.bloc] || BLOC_FILL.none;
+      ctx.fill(path);
+    }
+    ctx.lineWidth = 1;
+    for (const { entity, path } of land.parts) {
+      const selected = entity.id !== "" && this.isSelected("country", entity.id);
+      ctx.strokeStyle = selected ? RED : BLOC_BORDER[entity.bloc] || BLOC_BORDER.none;
+      ctx.lineWidth = selected ? 2 : 1;
+      ctx.stroke(path);
+    }
+    ctx.lineWidth = 1;
+  }
+
+  drawCoast(land) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.shadowColor = "rgba(255,255,255,0.8)";
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = "rgba(236,236,233,0.9)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke(land.all);
+    ctx.restore();
   }
 
   drawGrid(P) {
@@ -177,12 +267,16 @@ export class MapRenderer {
     ctx.stroke();
   }
 
-  drawContours(P) {
+  drawContours(P, land) {
     const ctx = this.ctx;
     const terrain = this.terrain;
     for (const level of terrain.levels) {
       const z = terrain.levelElevation(level.value);
-      const coast = level.value === terrain.seaLevel;
+      const coast = !land && level.value === terrain.seaLevel;
+      ctx.save();
+      if (land) {
+        ctx.clip(land.all);
+      }
       ctx.beginPath();
       const s = level.segments;
       for (let i = 0; i < s.length; i += 4) {
@@ -202,7 +296,7 @@ export class MapRenderer {
         ctx.lineWidth = 1;
       }
       ctx.stroke();
-      ctx.shadowBlur = 0;
+      ctx.restore();
     }
   }
 
@@ -259,55 +353,314 @@ export class MapRenderer {
     }
   }
 
-  drawRelations(P, now) {
+  span(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  curve(a, b, lift, lateral) {
+    const za = this.terrain.elevation(a.x, a.y);
+    const zb = this.terrain.elevation(b.x, b.y);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const nx = -dy / length;
+    const ny = dx / length;
+    return (t) => {
+      const arc = Math.sin(Math.PI * t);
+      return {
+        x: a.x + dx * t + nx * lateral * arc,
+        y: a.y + dy * t + ny * lateral * arc,
+        z: za + (zb - za) * t + arc * lift
+      };
+    };
+  }
+
+  trace(P, at, from, to) {
     const ctx = this.ctx;
-    const byId = new Map(this.snapshot.countries.map((c) => [c.id, c]));
-    this.snapshot.relations.forEach((relation, index) => {
-      const a = byId.get(relation.first);
-      const b = byId.get(relation.second);
-      if (!a || !b) {
-        return;
+    const steps = Math.max(2, Math.ceil(Math.abs(to - from) * 44));
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = from + ((to - from) * i) / steps;
+      const point = at(t);
+      const p = P(point.x, point.y, point.z);
+      if (i === 0) {
+        ctx.moveTo(p.x, p.y);
+      } else {
+        ctx.lineTo(p.x, p.y);
       }
-      const hostile = HOSTILE.test(relation.state);
-      const za = this.terrain.elevation(a.x, a.y);
-      const zb = this.terrain.elevation(b.x, b.y);
-      const lift = 60 + Math.hypot(a.x - b.x, a.y - b.y) * 0.18;
-      const at = (t) =>
-        P(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, za + (zb - za) * t + Math.sin(Math.PI * t) * lift);
-      ctx.beginPath();
-      for (let i = 0; i <= 48; i++) {
-        const p = at(i / 48);
-        if (i === 0) {
-          ctx.moveTo(p.x, p.y);
+    }
+  }
+
+  glyph(shape, x, y, r, rgb, alpha) {
+    const ctx = this.ctx;
+    ctx.strokeStyle = tint(rgb, alpha);
+    ctx.fillStyle = tint(rgb, alpha);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    switch (shape) {
+      case "diamond":
+      case "hollow":
+        ctx.moveTo(x, y - r);
+        ctx.lineTo(x + r, y);
+        ctx.lineTo(x, y + r);
+        ctx.lineTo(x - r, y);
+        ctx.closePath();
+        if (shape === "diamond") {
+          ctx.fill();
         } else {
-          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
         }
+        break;
+      case "square":
+        ctx.rect(x - r, y - r, r * 2, r * 2);
+        ctx.fill();
+        break;
+      case "cross":
+        ctx.moveTo(x - r, y - r);
+        ctx.lineTo(x + r, y + r);
+        ctx.moveTo(x + r, y - r);
+        ctx.lineTo(x - r, y + r);
+        ctx.stroke();
+        break;
+      case "bracket": {
+        const arm = r * 0.45;
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          ctx.moveTo(x + sx * r, y + sy * (r - arm));
+          ctx.lineTo(x + sx * r, y + sy * r);
+          ctx.lineTo(x + sx * (r - arm), y + sy * r);
+        }
+        ctx.stroke();
+        break;
       }
-      ctx.strokeStyle = hostile ? "rgba(255,43,43,0.7)" : "rgba(236,236,233,0.45)";
+      default:
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.lineWidth = 1;
+  }
+
+  marker(P, at, t, shape, rgb, alpha, size) {
+    const point = at(t);
+    const p = P(point.x, point.y, point.z);
+    this.glyph(shape, p.x, p.y, size, rgb, alpha);
+    return p;
+  }
+
+  drawRelations(P) {
+    const ctx = this.ctx;
+    for (const relation of this.snapshot.relations) {
+      const hostile = relation.state === "Hostile";
+      if (!hostile && relation.state !== "Allied") {
+        continue;
+      }
+      const a = this.countryIndex.get(relation.first);
+      const b = this.countryIndex.get(relation.second);
+      if (!a || !b) {
+        continue;
+      }
+      const at = this.curve(a, b, hostile ? 40 + this.span(a, b) * 0.12 : 0, 0);
+      this.trace(P, at, 0, 1);
       ctx.lineWidth = 1;
+      if (hostile) {
+        ctx.setLineDash([1, 5]);
+        ctx.strokeStyle = tint(RED_RGB, 0.34);
+      } else {
+        ctx.setLineDash([]);
+        ctx.strokeStyle = tint(WHITE_RGB, 0.13);
+      }
       ctx.stroke();
-      const head = at(((now / 5000) + index * 0.31) % 1);
-      ctx.fillStyle = hostile ? RED : INK;
-      ctx.beginPath();
-      ctx.arc(head.x, head.y, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    });
+      ctx.setLineDash([]);
+    }
+  }
+
+  drawInteractions(P, now) {
+    const snapshot = this.snapshot;
+    const fraction = Math.min(1, (now - this.lastSnapshotAt) / this.interval);
+    const tickNow = snapshot.tick + fraction;
+    const detailed = this.projection.zoom >= DETAIL_ZOOM;
+    for (const item of snapshot.interactions) {
+      const a = this.countryIndex.get(item.source);
+      const b = this.countryIndex.get(item.target);
+      if (!a || !b) {
+        continue;
+      }
+      const finished = item.endTick != null;
+      const span = Math.max(1, item.dueTick - item.startTick);
+      const reference = finished ? item.endTick : tickNow;
+      const progress = Math.min(1, Math.max(0, (reference - item.startTick) / span));
+      const age = finished ? Math.max(0, tickNow - item.endTick) : 0;
+      const fade = finished ? Math.max(0, 1 - age / FADE_TICKS) : 1;
+      if (fade <= 0) {
+        continue;
+      }
+      const view = { a, b, item, progress, finished, age, fade, now, detailed };
+      switch (item.kind) {
+        case "Negotiation":
+          this.drawNegotiation(P, view);
+          break;
+        case "SupplyShipment":
+          this.drawShipment(P, view);
+          break;
+        case "Clash":
+          this.drawClash(P, view);
+          break;
+        case "MissileStrike":
+          this.drawMissile(P, view);
+          break;
+        default:
+          break;
+      }
+    }
+    this.ctx.setLineDash([]);
+    this.ctx.lineWidth = 1;
+  }
+
+  drawNegotiation(P, view) {
+    const ctx = this.ctx;
+    const { a, b, item, progress, finished, fade } = view;
+    const at = this.curve(a, b, 18 + this.span(a, b) * 0.05, 0);
+    const concluded = item.status === "Succeeded";
+    const failed = item.status === "Cancelled";
+    ctx.lineWidth = 1;
+    ctx.setLineDash(concluded ? [] : MODE_DASH.None);
+    this.trace(P, at, 0, finished ? progress : 1);
+    ctx.strokeStyle = tint(failed ? RED_RGB : WHITE_RGB, (concluded ? 0.85 : 0.5) * fade);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (!finished) {
+      this.marker(P, at, progress, "hollow", WHITE_RGB, 1, 4);
+    } else if (concluded) {
+      this.marker(P, at, 0.5, "diamond", WHITE_RGB, fade, 4);
+    } else {
+      this.marker(P, at, progress, "cross", RED_RGB, fade, 5);
+    }
+  }
+
+  drawShipment(P, view) {
+    const ctx = this.ctx;
+    const { a, b, item, progress, finished, fade, detailed } = view;
+    const distance = this.span(a, b);
+    const air = item.mode === "Air";
+    const naval = item.mode === "Naval";
+    const at = this.curve(a, b, air ? 26 + distance * 0.1 : 0, naval ? distance * 0.05 : 0);
+    const lost = item.status === "Intercepted";
+    const rgb = lost ? RED_RGB : WHITE_RGB;
+    if (!finished && progress < 1) {
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1;
+      this.trace(P, at, progress, 1);
+      ctx.strokeStyle = tint(WHITE_RGB, 0.14);
+      ctx.stroke();
+    }
+    ctx.setLineDash(MODE_DASH[item.mode] || []);
+    ctx.lineWidth = 1.3;
+    this.trace(P, at, 0, progress);
+    ctx.strokeStyle = tint(rgb, 0.8 * fade);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    if (lost && finished) {
+      this.marker(P, at, progress, "cross", RED_RGB, fade, 5);
+      return;
+    }
+    const p = this.marker(P, at, progress, "square", rgb, fade, 3.2);
+    if (detailed) {
+      ctx.font = FONT;
+      ctx.fillStyle = tint(rgb, fade);
+      ctx.fillText(String(Math.round(item.cargo)), p.x + 6, p.y - 5);
+    }
+  }
+
+  drawClash(P, view) {
+    const ctx = this.ctx;
+    const { a, b, finished, fade, now } = view;
+    const at = this.curve(a, b, 0, 0);
+    ctx.setLineDash([14, 4]);
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = tint(RED_RGB, 0.8 * fade);
+    this.trace(P, at, 0, 0.5);
+    ctx.stroke();
+    this.trace(P, at, 1, 0.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    const point = at(0.5);
+    const p = P(point.x, point.y, point.z);
+    if (finished) {
+      this.glyph("cross", p.x, p.y, 6, RED_RGB, fade);
+      return;
+    }
+    this.glyph("bracket", p.x, p.y, 9 + Math.sin(now / 160) * 2, RED_RGB, 1);
+    this.glyph("dot", p.x, p.y, 1.8, RED_RGB, 1);
+  }
+
+  drawMissile(P, view) {
+    const ctx = this.ctx;
+    const { a, b, item, progress, finished, age, fade, now } = view;
+    const at = this.curve(a, b, 70 + this.span(a, b) * 0.4, 0);
+    const hit = item.status === "Succeeded";
+    const targetZ = this.terrain.elevation(b.x, b.y);
+    if (!finished) {
+      ctx.setLineDash([2, 5]);
+      ctx.lineWidth = 1;
+      this.trace(P, at, progress, 1);
+      ctx.strokeStyle = tint(RED_RGB, 0.26);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (progress > 0.55) {
+        const warn = (now / 700) % 1;
+        this.ring(P, b.x, b.y, 10 + warn * 30, targetZ);
+        ctx.strokeStyle = tint(RED_RGB, 0.5 * (1 - warn));
+        ctx.stroke();
+      }
+    }
+    ctx.lineWidth = 1.5;
+    this.trace(P, at, 0, progress);
+    ctx.strokeStyle = tint(RED_RGB, 0.9 * fade);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    if (!finished) {
+      const point = at(progress);
+      const p = P(point.x, point.y, point.z);
+      ctx.save();
+      ctx.shadowColor = RED;
+      ctx.shadowBlur = 12;
+      this.glyph("dot", p.x, p.y, 3, RED_RGB, 1);
+      ctx.restore();
+    } else if (hit) {
+      this.ring(P, b.x, b.y, 10 + age * 9, targetZ);
+      ctx.strokeStyle = tint(RED_RGB, 0.9 * fade);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      const p = P(b.x, b.y, targetZ);
+      this.glyph("bracket", p.x, p.y, 10, RED_RGB, fade);
+    } else {
+      this.marker(P, at, progress, "cross", RED_RGB, fade, 6);
+    }
   }
 
   drawUnits(P, now) {
     const ctx = this.ctx;
     ctx.font = FONT;
+    const detailed = this.projection.zoom >= DETAIL_ZOOM;
     for (const entry of this.units.values()) {
       const k = Math.min(1, (now - entry.start) / this.interval);
       entry.x = entry.fromX + (entry.toX - entry.fromX) * k;
       entry.y = entry.fromY + (entry.toY - entry.fromY) * k;
       const unit = entry.data;
       const selected = this.isSelected("unit", unit.id);
-      const tone = this.tones.get(unit.owner) || INK;
+      const tone = this.toneOf(unit.owner);
       const ground = this.terrain.elevation(entry.x, entry.y);
       const lift = unit.kind === "Air" ? 35 : 3;
       const base = P(entry.x, entry.y, ground);
       const p = P(entry.x, entry.y, ground + lift);
+      const r = Math.max(4, 6 * p.k);
+
+      if (unit.status === "Destroyed") {
+        this.glyph("cross", base.x, base.y, r * 0.8, RED_RGB, 0.7);
+        continue;
+      }
 
       if (entry.trail.length > 0) {
         ctx.beginPath();
@@ -350,7 +703,6 @@ export class MapRenderer {
         ctx.stroke();
       }
 
-      const r = Math.max(5, 7 * p.k * 1.2);
       ctx.strokeStyle = selected ? RED : tone;
       ctx.lineWidth = 1.5;
       drawSymbol(ctx, unit.kind, p.x, p.y, r);
@@ -362,47 +714,65 @@ export class MapRenderer {
       ctx.fillStyle = ratio < 0.3 ? RED : tone;
       ctx.fillRect(p.x - r, p.y + r + 3, r * 2 * ratio, 2);
 
-      ctx.fillStyle = selected ? RED : MID;
-      ctx.fillText(`${unit.owner}-${unit.id}`, p.x + r + 4, p.y + 3);
+      if (selected || detailed) {
+        ctx.fillStyle = selected ? RED : MID;
+        ctx.fillText(`${unit.owner}-${unit.id}`, p.x + r + 4, p.y + 3);
+      }
     }
   }
 
   drawCountries(P, now) {
     const ctx = this.ctx;
     ctx.font = FONT;
+    const detailed = this.projection.zoom >= DETAIL_ZOOM;
     for (const country of this.snapshot.countries) {
       const z = this.terrain.elevation(country.x, country.y);
       const base = P(country.x, country.y, z);
-      const top = P(country.x, country.y, z + 150);
-      const gradient = ctx.createLinearGradient(base.x, base.y, top.x, top.y);
-      gradient.addColorStop(0, "rgba(255,43,43,0.9)");
-      gradient.addColorStop(1, "rgba(255,43,43,0)");
-      ctx.strokeStyle = gradient;
-      ctx.beginPath();
-      ctx.moveTo(base.x, base.y);
-      ctx.lineTo(top.x, top.y);
-      ctx.stroke();
+      const selected = this.isSelected("country", country.id);
+      const tone = BLOC_TONE[country.bloc] || INK;
 
-      for (let n = 0; n < 3; n++) {
-        const phase = (now / 2800 + n / 3) % 1;
-        this.ring(P, country.x, country.y, 8 + phase * 70, z);
-        ctx.strokeStyle = `rgba(236,236,233,${0.55 * (1 - phase)})`;
+      if (country.isModel) {
+        const top = P(country.x, country.y, z + 150);
+        const gradient = ctx.createLinearGradient(base.x, base.y, top.x, top.y);
+        gradient.addColorStop(0, "rgba(255,43,43,0.9)");
+        gradient.addColorStop(1, "rgba(255,43,43,0)");
+        ctx.strokeStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(base.x, base.y);
+        ctx.lineTo(top.x, top.y);
+        ctx.stroke();
+        for (let n = 0; n < 3; n++) {
+          const phase = (now / 2800 + n / 3) % 1;
+          this.ring(P, country.x, country.y, 8 + phase * 70, z);
+          ctx.strokeStyle = `rgba(236,236,233,${0.55 * (1 - phase)})`;
+          ctx.stroke();
+        }
+        ctx.save();
+        ctx.shadowColor = RED;
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = RED;
+        ctx.beginPath();
+        ctx.arc(base.x, base.y, selected ? 6 : 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.fillStyle = selected ? RED : tone;
+        ctx.beginPath();
+        ctx.arc(base.x, base.y, selected ? 4.5 : 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = selected ? RED : "rgba(236,236,233,0.35)";
+        ctx.beginPath();
+        ctx.arc(base.x, base.y, 6.5, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      const selected = this.isSelected("country", country.id);
-      ctx.shadowColor = RED;
-      ctx.shadowBlur = 16;
-      ctx.fillStyle = RED;
-      ctx.beginPath();
-      ctx.arc(base.x, base.y, selected ? 6 : 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
+      const showName = country.isModel || detailed || selected;
       ctx.fillStyle = INK;
-      ctx.fillText(country.name, base.x + 12, base.y - 8);
-      ctx.fillStyle = MID;
-      ctx.fillText(`S ${Math.round(country.supplies)}  A ${Math.round(country.ammunition)}`, base.x + 12, base.y + 5);
+      ctx.fillText(showName ? country.name : country.id, base.x + 11, base.y - 7);
+      if (showName) {
+        ctx.fillStyle = MID;
+        ctx.fillText(`S ${Math.round(country.supplies)}  A ${Math.round(country.ammunition)}`, base.x + 11, base.y + 6);
+      }
     }
   }
 
@@ -416,18 +786,7 @@ export class MapRenderer {
     }
     const z = this.terrain.elevation(position.x, position.y) + 3;
     const p = P(position.x, position.y, z);
-    const size = 16 + Math.sin(now / 300) * 1.5;
-    const ctx = this.ctx;
-    ctx.strokeStyle = RED;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-      ctx.moveTo(p.x + sx * size, p.y + sy * (size - 7));
-      ctx.lineTo(p.x + sx * size, p.y + sy * size);
-      ctx.lineTo(p.x + sx * (size - 7), p.y + sy * size);
-    }
-    ctx.stroke();
-    ctx.lineWidth = 1;
+    this.glyph("bracket", p.x, p.y, 16 + Math.sin(now / 300) * 1.5, RED_RGB, 1);
   }
 
   isSelected(type, id) {

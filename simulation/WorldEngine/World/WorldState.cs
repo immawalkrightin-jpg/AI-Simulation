@@ -2,6 +2,7 @@ using System.Numerics;
 using WorldEngine.Countries;
 using WorldEngine.Diplomacy;
 using WorldEngine.Events;
+using WorldEngine.Interactions;
 using WorldEngine.SimulationClock;
 using WorldEngine.Units;
 
@@ -17,6 +18,8 @@ public sealed class WorldState
     public RelationMatrix Relations { get; } = new();
     public EventScheduler Scheduler { get; } = new();
     public EventLog Log { get; } = new();
+    public InteractionBook Interactions { get; } = new();
+    public CountryId? ModelCountry { get; set; }
     public Random Rng { get; }
     public float Width { get; }
     public float Height { get; }

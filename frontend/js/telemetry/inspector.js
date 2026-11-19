@@ -52,15 +52,31 @@ export class Inspector {
         : null;
     }
     const c = snapshot.countries.find((item) => item.id === selection.id);
-    return c
-      ? {
-          title: c.name,
-          fields: [
-            ["Capital", `${fixed(c.x)}, ${fixed(c.y)}`],
-            ["Supplies", fixed(c.supplies, 0)],
-            ["Ammunition", fixed(c.ammunition, 0)]
-          ]
-        }
-      : null;
+    if (!c) {
+      return null;
+    }
+    const mine = snapshot.relations
+      .filter((r) => r.first === c.id || r.second === c.id)
+      .map((r) => ({ other: r.first === c.id ? r.second : r.first, value: r.value }))
+      .sort((a, b) => a.value - b.value);
+    const operations = snapshot.interactions.filter(
+      (i) => i.endTick == null && (i.source === c.id || i.target === c.id)
+    );
+    const units = snapshot.units.filter((u) => u.owner === c.id);
+    const fields = [
+      ["Bloc", c.bloc],
+      ["Capital", `${fixed(c.x)}, ${fixed(c.y)}`],
+      ["Supplies", fixed(c.supplies, 0)],
+      ["Ammunition", fixed(c.ammunition, 0)],
+      ["Units", `${units.filter((u) => u.status !== "Destroyed").length} / ${units.length}`],
+      ["Operations", operations.length]
+    ];
+    if (mine.length > 0) {
+      const worst = mine[0];
+      const best = mine[mine.length - 1];
+      fields.push(["Most hostile", `${worst.other} ${fixed(worst.value, 2)}`]);
+      fields.push(["Closest", `${best.other} ${fixed(best.value, 2)}`]);
+    }
+    return { title: c.name, fields };
   }
 }

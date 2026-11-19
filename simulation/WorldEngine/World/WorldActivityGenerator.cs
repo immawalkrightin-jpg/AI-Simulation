@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldEngine.Events;
 using WorldEngine.Units;
 
@@ -7,8 +8,14 @@ public sealed class WorldActivityGenerator
 {
     private readonly int interval;
     private readonly double probability;
+    private readonly bool dispatchUnits;
+    private readonly float patrolRadius;
 
-    public WorldActivityGenerator(int interval = 5, double probability = 0.4)
+    public WorldActivityGenerator(
+        int interval = 5,
+        double probability = 0.4,
+        bool dispatchUnits = true,
+        float patrolRadius = 0)
     {
         if (interval <= 0)
         {
@@ -16,6 +23,8 @@ public sealed class WorldActivityGenerator
         }
         this.interval = interval;
         this.probability = probability;
+        this.dispatchUnits = dispatchUnits;
+        this.patrolRadius = patrolRadius;
     }
 
     public void Step(WorldState world)
@@ -42,6 +51,10 @@ public sealed class WorldActivityGenerator
                     new RelationShiftEvent(country.Id, other.Id, delta, reason) { ScheduledTick = due });
                 continue;
             }
+            if (!dispatchUnits)
+            {
+                continue;
+            }
             var owned = world.Units
                 .Where(u => u.Owner == country.Id && u.Status != UnitStatus.Destroyed)
                 .ToList();
@@ -50,8 +63,16 @@ public sealed class WorldActivityGenerator
                 continue;
             }
             var unit = owned[world.Rng.Next(owned.Count)];
-            world.Scheduler.Schedule(
-                new UnitDispatchEvent(unit.Id, world.RandomPoint()) { ScheduledTick = due });
+            var destination = patrolRadius > 0 ? Patrol(world, unit) : world.RandomPoint();
+            world.Scheduler.Schedule(new UnitDispatchEvent(unit.Id, destination) { ScheduledTick = due });
         }
+    }
+
+    private Vector2 Patrol(WorldState world, Unit unit)
+    {
+        var angle = world.Rng.NextDouble() * Math.PI * 2;
+        var radius = world.Rng.NextDouble() * patrolRadius;
+        var point = unit.Position + new Vector2((float)(Math.Cos(angle) * radius), (float)(Math.Sin(angle) * radius));
+        return new Vector2(Math.Clamp(point.X, 0, world.Width), Math.Clamp(point.Y, 0, world.Height));
     }
 }

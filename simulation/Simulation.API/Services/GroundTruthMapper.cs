@@ -1,4 +1,5 @@
 using Simulation.API.Contracts.GroundTruth;
+using WorldEngine.Interactions;
 using WorldEngine.Sensors;
 using WorldEngine.World;
 
@@ -31,7 +32,15 @@ public static class GroundTruthMapper
             state.Width,
             state.Height,
             countries
-                .Select(c => new CountryDto(c.Id.Value, c.Name, c.Capital.X, c.Capital.Y, c.Supplies, c.Ammunition))
+                .Select(c => new CountryDto(
+                    c.Id.Value,
+                    c.Name,
+                    c.Capital.X,
+                    c.Capital.Y,
+                    c.Supplies,
+                    c.Ammunition,
+                    c.Bloc.ToString(),
+                    state.ModelCountry == c.Id))
                 .ToList(),
             state.Units
                 .Select(u => new UnitDto(
@@ -53,6 +62,21 @@ public static class GroundTruthMapper
             state.Log.Records
                 .TakeLast(50)
                 .Select(r => new EventDto(r.Tick, r.Kind, r.Description))
+                .ToList(),
+            state.Interactions
+                .Visible(state.Clock.Tick, InteractionEngine.FadeTicks)
+                .Select(i => new InteractionDto(
+                    i.Id,
+                    i.Kind.ToString(),
+                    i.Source.Value,
+                    i.Target.Value,
+                    i.Mode.ToString(),
+                    i.Status.ToString(),
+                    i.Cargo,
+                    i.Subject,
+                    i.StartTick,
+                    i.DueTick,
+                    i.EndTick))
                 .ToList());
     }
 }

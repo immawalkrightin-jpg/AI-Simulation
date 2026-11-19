@@ -47,4 +47,9 @@ document.querySelectorAll("[data-step]").forEach((button) => {
   button.addEventListener("click", () => link.control("step", Number(button.dataset.step)).catch(() => {}));
 });
 
+fetch("assets/maps/coldwar.json")
+  .then((response) => (response.ok ? response.json() : null))
+  .then((map) => renderer.setMap(map))
+  .catch(() => renderer.setMap(null));
+
 link.start();

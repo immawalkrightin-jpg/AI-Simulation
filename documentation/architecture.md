@@ -31,6 +31,14 @@ Contracts live in `Simulation.API/Contracts`, in two separate namespaces: `Contr
 
 Observations are drained from the sensor network once per tick, sequenced, kept in a bounded buffer of 5000 and pushed to the observation hub; late or reconnecting clients catch up through the `after` cursor.
 
+## World scenario
+
+`Simulation.API/Scenarios/DefaultScenario.cs` builds the Cold War world: 26 countries in three blocs (East 11, West 10, non-aligned 5) with the Soviet Union as the model country, starting relations by bloc plus per-pair overrides, units per country and a Soviet-only sensor network. Pairs that must never fight directly (Soviet Union against any Western country, United States against the Eastern European allies) are passed to the interaction engine and can only interact through diplomacy and supply.
+
+## Interactions
+
+`WorldEngine/Interactions` spawns and resolves four kinds of operation between countries: negotiation, supply shipment (ground, naval or air), clash and missile strike. Each carries a start tick, a due tick and a planned outcome fixed at spawn from the seeded generator, so history is reproducible. Outcomes move relations, supplies, ammunition and unit strength, and relations drift back toward their starting values so the world does not collapse into permanent war. Finished operations stay visible for a fade window and are then pruned.
+
 ## Map visual reference
 
 `documentation/reference/map_reference.gif`: dark tilted plane, contour lines, glowing white territory outline, red focal point with arcing projection lines, red route traces, red bracket target boxes, faint grid, small telemetry labels.

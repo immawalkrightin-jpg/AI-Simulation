@@ -1,3 +1,4 @@
+using WorldEngine.Interactions;
 using WorldEngine.Sensors;
 
 namespace WorldEngine.World;
@@ -5,6 +6,7 @@ namespace WorldEngine.World;
 public sealed class WorldSimulation
 {
     private readonly WorldActivityGenerator activity;
+    private readonly InteractionEngine? interactions;
 
     public WorldState State { get; }
     public SensorNetwork? Sensors { get; }
@@ -12,11 +14,13 @@ public sealed class WorldSimulation
     public WorldSimulation(
         WorldState state,
         WorldActivityGenerator? activity = null,
-        SensorNetwork? sensors = null)
+        SensorNetwork? sensors = null,
+        InteractionEngine? interactions = null)
     {
         State = state;
         this.activity = activity ?? new WorldActivityGenerator();
         Sensors = sensors;
+        this.interactions = interactions;
     }
 
     public void Step()
@@ -33,6 +37,7 @@ public sealed class WorldSimulation
         }
         Sensors?.Sense(State);
         activity.Step(State);
+        interactions?.Step(State);
     }
 
     public void Run(int ticks)

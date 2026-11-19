@@ -73,10 +73,13 @@ public class ApiTests : IClassFixture<ApiFactory>
     public async Task SnapshotContainsCountriesUnitsAndSensors()
     {
         var snapshot = await Json(await Client("gt").GetAsync("/api/ground-truth/snapshot"));
-        Assert.Equal(3, snapshot.GetProperty("countries").GetArrayLength());
+        var countries = snapshot.GetProperty("countries").GetArrayLength();
+        Assert.True(countries >= 20);
+        Assert.Equal(1, snapshot.GetProperty("countries").EnumerateArray().Count(c => c.GetProperty("isModel").GetBoolean()));
         Assert.True(snapshot.GetProperty("units").GetArrayLength() > 0);
         Assert.True(snapshot.GetProperty("sensors").GetArrayLength() > 0);
-        Assert.Equal(3, snapshot.GetProperty("relations").GetArrayLength());
+        Assert.Equal(countries * (countries - 1) / 2, snapshot.GetProperty("relations").GetArrayLength());
+        Assert.True(snapshot.TryGetProperty("interactions", out _));
     }
 
     [Fact]
