@@ -1,0 +1,14 @@
+ml/.venv/
+__pycache__/
+*.pyc
+bin/
+obj/
+.vs/
+.idea/
+*.user
+node_modules/
+data/datasets/*
+!data/datasets/.gitkeep
+ml/models/*
+!ml/models/.gitkeep
+.DS_Store
