@@ -137,7 +137,7 @@ public class ApiTests : IClassFixture<ApiFactory>
     public void ObservationContractsNeverReferenceGroundTruthTypes()
     {
         var contractTypes = typeof(ObservationDto).Assembly.GetTypes()
-            .Where(t => t.Namespace == "Simulation.API.Contracts.Observations")
+            .Where(t => t.Namespace is "Simulation.API.Contracts.Observations" or "Simulation.API.Contracts.Ai")
             .ToList();
         Assert.NotEmpty(contractTypes);
         foreach (var type in contractTypes)

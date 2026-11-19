@@ -40,7 +40,10 @@ public sealed class AccessKeyMiddleware
         {
             return options.GroundTruthKey;
         }
-        if (path.StartsWithSegments("/api/observations") || path.StartsWithSegments("/hubs/observations"))
+        if (path.StartsWithSegments("/api/observations")
+            || path.StartsWithSegments("/hubs/observations")
+            || path.StartsWithSegments("/api/ai")
+            || path.StartsWithSegments("/hubs/ai"))
         {
             return options.AiKey;
         }

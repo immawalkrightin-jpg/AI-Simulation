@@ -1,3 +1,4 @@
+using Simulation.API.Contracts.Ai;
 using Simulation.API.Contracts.GroundTruth;
 using WorldEngine.Sensors;
 using WorldEngine.World;
@@ -35,6 +36,22 @@ public sealed class SimulationSession
         lock (gate)
         {
             return GroundTruthMapper.Map(simulation);
+        }
+    }
+
+    public AssetPicture Assets()
+    {
+        lock (gate)
+        {
+            var state = simulation.State;
+            var sensors = simulation.Sensors?.Sensors ?? Array.Empty<Sensor>();
+            return new AssetPicture(
+                state.Clock.Tick,
+                state.Width,
+                state.Height,
+                sensors
+                    .Select(s => new AssetSensorDto(s.Id, s.Kind.ToString(), s.Position.X, s.Position.Y, s.Range))
+                    .ToList());
         }
     }
 
