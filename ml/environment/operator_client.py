@@ -15,3 +15,7 @@ class OperatorClient(HttpClient):
 
     def step(self, count: int = 1) -> dict:
         return self.request("POST", f"/api/simulation/step?count={int(count)}")
+
+    def reset(self, seed: int | None = None) -> dict:
+        suffix = "" if seed is None else f"?seed={int(seed)}"
+        return self.request("POST", f"/api/simulation/reset{suffix}")

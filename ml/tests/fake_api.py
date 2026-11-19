@@ -12,13 +12,24 @@ KINDS = {
 }
 CONFIDENCES = {"Confirmed", "Estimated", "Suspected", "Predicted"}
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+MAX_STEP = 1000
 
 
 class FakeApi:
-    def __init__(self, ai_key: str = "ai", width: float = 2000.0, height: float = 1000.0):
+    def __init__(
+        self,
+        ai_key: str = "ai",
+        width: float = 2000.0,
+        height: float = 1000.0,
+        operator_key: str = "gt",
+        default_seed: int = 42,
+    ):
         self.ai_key = ai_key
+        self.operator_key = operator_key
         self.width = width
         self.height = height
+        self.seed = default_seed
+        self.paused = False
         self.tick = 0
         self.sensors = [{"id": 1, "kind": "Radar", "x": 100.0, "y": 100.0, "range": 400.0}]
         self.observations: list[dict] = []
@@ -26,6 +37,7 @@ class FakeApi:
         self.points: dict[str, dict] = {}
         self.version = 0
         self.requests: list[tuple[str, str]] = []
+        self.step_hook = None
         api = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -42,7 +54,8 @@ class FakeApi:
 
             def _authorised(self) -> bool:
                 api.requests.append((self.command, self.path))
-                if self.headers.get("X-Access-Key") != api.ai_key:
+                required = api.operator_key if self.path.startswith("/api/simulation") else api.ai_key
+                if self.headers.get("X-Access-Key") != required:
                     self._send(401)
                     return False
                 return True
@@ -62,6 +75,36 @@ class FakeApi:
                         "observations": [o for o in api.observations if o["sequence"] > after]})
                 elif parsed.path == "/api/ai/points":
                     self._send(200, {"version": api.version, "points": list(api.points.values())})
+                elif parsed.path == "/api/simulation/status":
+                    self._send(200, api.status())
+                else:
+                    self._send(404)
+
+            def do_POST(self):
+                if not self._authorised():
+                    return
+                parsed = urlparse(self.path)
+                query = parse_qs(parsed.query)
+                if parsed.path == "/api/simulation/pause":
+                    api.paused = True
+                    self._send(200, api.status())
+                elif parsed.path == "/api/simulation/resume":
+                    api.paused = False
+                    self._send(200, api.status())
+                elif parsed.path == "/api/simulation/step":
+                    count = int(query.get("count", ["1"])[0])
+                    if count < 1 or count > MAX_STEP:
+                        self._send(400, {"error": "count out of range"})
+                        return
+                    api.advance(count)
+                    self._send(200, api.status())
+                elif parsed.path == "/api/simulation/reset":
+                    seed = int(query["seed"][0]) if "seed" in query else api.seed
+                    if seed < 0:
+                        self._send(400, {"error": "negative seed"})
+                        return
+                    api.reset(seed)
+                    self._send(200, api.status())
                 else:
                     self._send(404)
 
@@ -97,6 +140,23 @@ class FakeApi:
     @property
     def base(self) -> str:
         return f"http://127.0.0.1:{self.server.server_address[1]}"
+
+    def status(self) -> dict:
+        return {"tick": self.tick, "paused": self.paused, "seed": self.seed}
+
+    def advance(self, count: int) -> None:
+        for _ in range(count):
+            self.tick += 1
+            if self.step_hook is not None:
+                self.step_hook(self, self.tick)
+
+    def reset(self, seed: int) -> None:
+        self.seed = seed
+        self.tick = 0
+        self.observations.clear()
+        self.sequence = 0
+        self.points.clear()
+        self.version += 1
 
     def validate(self, point_id: str, body: dict) -> str | None:
         if not ID_PATTERN.match(point_id):
