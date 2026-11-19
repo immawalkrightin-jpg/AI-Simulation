@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Window A - Ground truth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main id="stage"><canvas id="map"></canvas></main>
+<section id="telemetry" class="panel">
+<header><span id="link" class="link" data-state="connecting"></span><h1>Window A, ground truth</h1></header>
+<dl id="clock" class="rows"></dl>
+<h2>Countries</h2>
+<div id="countries"></div>
+<h2>Relations</h2>
+<dl id="relations" class="rows"></dl>
+<h2>Events</h2>
+<ol id="events"></ol>
+</section>
+<aside id="inspector" class="panel" hidden></aside>
+<nav id="controls">
+<button id="toggle" type="button">Pause</button>
+<button type="button" data-step="1">Step 1</button>
+<button type="button" data-step="10">Step 10</button>
+</nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
