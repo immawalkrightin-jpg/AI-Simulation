@@ -12,9 +12,9 @@ Autonomous AI geopolitical and military simulation. The simulation owns ground t
 
 ## Milestones
 
-1. Repository scaffold
+1. Repository scaffold (done)
 2. World engine core: clock, countries, units, events, diplomacy (done)
-3. Sensors and observation separation
+3. Sensors and observation separation (done)
 4. API contracts and streaming hub
 5. Frontend Window A map renderer
 6. Frontend Window B AI map with confidence-typed markers

@@ -1,3 +1,5 @@
+using WorldEngine.Sensors;
+
 namespace WorldEngine.World;
 
 public sealed class WorldSimulation
@@ -5,11 +7,16 @@ public sealed class WorldSimulation
     private readonly WorldActivityGenerator activity;
 
     public WorldState State { get; }
+    public SensorNetwork? Sensors { get; }
 
-    public WorldSimulation(WorldState state, WorldActivityGenerator? activity = null)
+    public WorldSimulation(
+        WorldState state,
+        WorldActivityGenerator? activity = null,
+        SensorNetwork? sensors = null)
     {
         State = state;
         this.activity = activity ?? new WorldActivityGenerator();
+        Sensors = sensors;
     }
 
     public void Step()
@@ -24,6 +31,7 @@ public sealed class WorldSimulation
         {
             unit.Step(State.Clock.TickSeconds);
         }
+        Sensors?.Sense(State);
         activity.Step(State);
     }
 
