@@ -14,6 +14,8 @@ public sealed class SensorNetwork : IObservationSource
         rng = new Random(seed);
     }
 
+    public IReadOnlyList<Sensor> Sensors => sensors.OrderBy(s => s.Id).ToList();
+
     public void Add(Sensor sensor)
     {
         if (sensors.Any(s => s.Id == sensor.Id))
