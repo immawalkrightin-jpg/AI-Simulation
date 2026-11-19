@@ -38,4 +38,13 @@ public sealed class ObservationBuffer
             return new ObservationPage(sequence, page);
         }
     }
+
+    public void Clear()
+    {
+        lock (gate)
+        {
+            items.Clear();
+            sequence = 0;
+        }
+    }
 }

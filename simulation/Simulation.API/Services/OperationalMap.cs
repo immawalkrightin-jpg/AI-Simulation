@@ -122,6 +122,16 @@ public sealed partial class OperationalMap
         }
     }
 
+    public OperationalMapDto Clear()
+    {
+        lock (gate)
+        {
+            points.Clear();
+            version++;
+            return Build();
+        }
+    }
+
     private OperationalMapDto Build() =>
         new(
             version,

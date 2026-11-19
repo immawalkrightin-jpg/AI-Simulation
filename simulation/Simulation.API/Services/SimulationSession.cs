@@ -13,11 +13,28 @@ public sealed record AdvanceResult(
 public sealed class SimulationSession
 {
     private readonly object gate = new();
-    private readonly WorldSimulation simulation;
+    private readonly Func<int, WorldSimulation>? factory;
+    private WorldSimulation simulation;
+    private int seed;
 
-    public SimulationSession(WorldSimulation simulation)
+    public SimulationSession(WorldSimulation simulation, Func<int, WorldSimulation>? factory = null, int seed = 0)
     {
         this.simulation = simulation;
+        this.factory = factory;
+        this.seed = seed;
+    }
+
+    public bool CanReset => factory is not null;
+
+    public int Seed
+    {
+        get
+        {
+            lock (gate)
+            {
+                return seed;
+            }
+        }
     }
 
     public long Tick
@@ -28,6 +45,20 @@ public sealed class SimulationSession
             {
                 return simulation.State.Clock.Tick;
             }
+        }
+    }
+
+    public void Reset(int newSeed)
+    {
+        if (factory is null)
+        {
+            throw new InvalidOperationException("This session has no scenario factory to rebuild from.");
+        }
+        var rebuilt = factory(newSeed);
+        lock (gate)
+        {
+            simulation = rebuilt;
+            seed = newSeed;
         }
     }
 

@@ -9,7 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection("Simulation"));
 builder.Services.AddSingleton(provider =>
-    new SimulationSession(DefaultScenario.Build(provider.GetRequiredService<IOptions<SimulationOptions>>().Value.Seed)));
+{
+    var seed = provider.GetRequiredService<IOptions<SimulationOptions>>().Value.Seed;
+    return new SimulationSession(DefaultScenario.Build(seed), DefaultScenario.Build, seed);
+});
 builder.Services.AddSingleton<ObservationBuffer>();
 builder.Services.AddSingleton<OperationalMap>();
 builder.Services.AddSingleton<SimulationControl>();

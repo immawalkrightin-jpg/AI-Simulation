@@ -52,5 +52,21 @@ public sealed class SimulationController : ControllerBase
         return Ok(CurrentStatus());
     }
 
-    private SimulationStatus CurrentStatus() => new(session.Tick, control.Paused);
+    [HttpPost("reset")]
+    public async Task<IActionResult> Reset([FromQuery] int? seed = null, CancellationToken cancellationToken = default)
+    {
+        if (!session.CanReset)
+        {
+            return Conflict("This simulation cannot be reset.");
+        }
+        var target = seed ?? session.Seed;
+        if (target < 0)
+        {
+            return BadRequest("seed must not be negative.");
+        }
+        await broadcaster.ResetAsync(target, cancellationToken);
+        return Ok(CurrentStatus());
+    }
+
+    private SimulationStatus CurrentStatus() => new(session.Tick, control.Paused, session.Seed);
 }

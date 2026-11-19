@@ -66,4 +66,4 @@ public sealed record GroundTruthSnapshot(
     IReadOnlyList<EventDto> Events,
     IReadOnlyList<InteractionDto> Interactions);
 
-public sealed record SimulationStatus(long Tick, bool Paused);
+public sealed record SimulationStatus(long Tick, bool Paused, int Seed = 0);
