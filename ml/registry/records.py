@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MISSING = "<missing>"
 
@@ -60,6 +60,8 @@ class HumanCorrection:
     category: str
     description: str
     model_version: str | None
+    source_id: str | None = None
+    context: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

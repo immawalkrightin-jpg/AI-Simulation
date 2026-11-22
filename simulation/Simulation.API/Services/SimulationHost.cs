@@ -21,14 +21,21 @@ public sealed class SimulationHost : BackgroundService
         this.logger = logger;
     }
 
+    private TimeSpan CurrentInterval() =>
+        TimeSpan.FromMilliseconds(Math.Max(10, options.TickIntervalMs / control.Speed));
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var interval = TimeSpan.FromMilliseconds(Math.Max(10, options.TickIntervalMs));
-        using var timer = new PeriodicTimer(interval);
+        using var timer = new PeriodicTimer(CurrentInterval());
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
+                var interval = CurrentInterval();
+                if (timer.Period != interval)
+                {
+                    timer.Period = interval;
+                }
                 if (control.Paused)
                 {
                     continue;

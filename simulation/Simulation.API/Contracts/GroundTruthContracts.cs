@@ -52,7 +52,8 @@ public sealed record InteractionDto(
     string Subject,
     long StartTick,
     long DueTick,
-    long? EndTick);
+    long? EndTick,
+    string? Carrier = null);
 
 public sealed record GroundTruthSnapshot(
     long Tick,
@@ -66,4 +67,4 @@ public sealed record GroundTruthSnapshot(
     IReadOnlyList<EventDto> Events,
     IReadOnlyList<InteractionDto> Interactions);
 
-public sealed record SimulationStatus(long Tick, bool Paused, int Seed = 0);
+public sealed record SimulationStatus(long Tick, bool Paused, int Seed = 0, double Speed = 1);

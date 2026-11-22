@@ -41,6 +41,17 @@ public sealed class SimulationController : ControllerBase
         return Ok(CurrentStatus());
     }
 
+    [HttpPost("speed")]
+    public IActionResult Speed([FromQuery] double value = 1)
+    {
+        if (double.IsNaN(value) || value < SimulationControl.MinSpeed || value > SimulationControl.MaxSpeed)
+        {
+            return BadRequest($"value must be between {SimulationControl.MinSpeed} and {SimulationControl.MaxSpeed}.");
+        }
+        control.Speed = value;
+        return Ok(CurrentStatus());
+    }
+
     [HttpPost("step")]
     public async Task<IActionResult> Step([FromQuery] int count = 1, CancellationToken cancellationToken = default)
     {
@@ -68,5 +79,5 @@ public sealed class SimulationController : ControllerBase
         return Ok(CurrentStatus());
     }
 
-    private SimulationStatus CurrentStatus() => new(session.Tick, control.Paused, session.Seed);
+    private SimulationStatus CurrentStatus() => new(session.Tick, control.Paused, session.Seed, control.Speed);
 }

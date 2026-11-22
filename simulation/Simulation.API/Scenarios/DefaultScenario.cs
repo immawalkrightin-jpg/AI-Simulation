@@ -12,6 +12,8 @@ public static class DefaultScenario
     private const float WorldWidth = 2000;
     private const float WorldHeight = 1000;
     private const string ModelId = "USSR";
+    private const float MaxScatter = 37;
+    private const float ScatterShare = 0.4f;
 
     private sealed record Entry(
         string Id,
@@ -81,10 +83,47 @@ public static class DefaultScenario
 
     private static readonly string[] EastEuropeanAllies = { "GDR", "POL", "CZE", "HUN", "ROU", "BGR", "PRC" };
 
+    private static readonly Dictionary<UnitKind, int> KindSector = new()
+    {
+        [UnitKind.Infantry] = 0,
+        [UnitKind.Armor] = 1,
+        [UnitKind.Artillery] = 2,
+        [UnitKind.Air] = 3,
+        [UnitKind.SupplyConvoy] = 4
+    };
+
+    private const int SectorCount = 5;
+
     private static Vector2 Place(double longitude, double latitude) =>
         new(
             (float)((longitude + 180) / 360 * WorldWidth),
             (float)((90 - latitude) / 180 * WorldHeight));
+
+    private static float NearestCapitalDistance(Entry entry)
+    {
+        var capital = Place(entry.Longitude, entry.Latitude);
+        var nearest = float.MaxValue;
+        foreach (var other in Entries)
+        {
+            if (other.Id == entry.Id)
+            {
+                continue;
+            }
+            nearest = Math.Min(nearest, Vector2.Distance(capital, Place(other.Longitude, other.Latitude)));
+        }
+        return nearest;
+    }
+
+    private static Vector2 ScatterOffset(UnitKind kind, int occurrence, float maxRadius)
+    {
+        var sector = KindSector.TryGetValue(kind, out var index) ? index : 0;
+        var angle = sector * (2 * Math.PI / SectorCount) + occurrence * 0.45;
+        var minRadius = maxRadius * 0.45f;
+        var step = (sector % 3) / 2f;
+        var radius = minRadius + (maxRadius - minRadius) * step + occurrence * maxRadius * 0.1f;
+        radius = Math.Min(radius, maxRadius);
+        return new Vector2((float)(Math.Cos(angle) * radius), (float)(Math.Sin(angle) * radius));
+    }
 
     private static double BaseRelation(Entry a, Entry b)
     {
@@ -155,6 +194,8 @@ public static class DefaultScenario
         {
             var owner = new CountryId(entry.Id);
             var capital = Place(entry.Longitude, entry.Latitude);
+            var maxRadius = Math.Min(MaxScatter, NearestCapitalDistance(entry) * ScatterShare);
+            var occurrences = new Dictionary<UnitKind, int>();
             for (var k = 0; k < entry.Units.Length; k++)
             {
                 var kind = KindOf(entry.Units[k]);
@@ -173,9 +214,9 @@ public static class DefaultScenario
                 }
                 else
                 {
-                    var angle = k * 2.1;
-                    var radius = 12 + k * 5;
-                    position = capital + new Vector2((float)(Math.Cos(angle) * radius), (float)(Math.Sin(angle) * radius));
+                    occurrences.TryGetValue(kind.Value, out var occurrence);
+                    occurrences[kind.Value] = occurrence + 1;
+                    position = capital + ScatterOffset(kind.Value, occurrence, maxRadius);
                 }
                 var (speed, strength) = Stats(kind.Value);
                 world.AddUnit(owner, kind.Value, position, speed, strength);

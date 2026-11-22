@@ -232,6 +232,8 @@ class Registry:
         category: str,
         description: str,
         model_version: str | None = None,
+        source_id: str | None = None,
+        context: dict | None = None,
     ) -> HumanCorrection:
         if not isinstance(operation, str) or _OPERATION_NAME.fullmatch(operation) is None:
             raise ValueError("operation must be a name of letters, digits, dashes or underscores")
@@ -244,6 +246,12 @@ class Registry:
             raise ValueError("description must be 1 to 2000 characters")
         if model_version is not None:
             self._read("models", model_version)
+        if source_id is not None:
+            if not isinstance(source_id, str) or not 1 <= len(source_id) <= 64:
+                raise ValueError("source_id must be 1 to 64 characters")
+            if any(existing.source_id == source_id for existing in self.corrections()):
+                raise ValueError("source_id has already been recorded")
+        clean_context = _plain_dict(context or {}, "context")
         record = HumanCorrection(
             self._next_id("corrections"),
             self.clock(),
@@ -252,6 +260,8 @@ class Registry:
             category,
             text,
             model_version,
+            source_id,
+            clean_context,
         )
         return self._write("corrections", record.correction_id, record)
 

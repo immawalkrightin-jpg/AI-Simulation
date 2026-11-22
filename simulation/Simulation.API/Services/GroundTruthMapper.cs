@@ -7,6 +7,21 @@ namespace Simulation.API.Services;
 
 public static class GroundTruthMapper
 {
+    public static string? CarrierOf(InteractionKind kind, TransportMode mode)
+    {
+        if (kind != InteractionKind.SupplyShipment)
+        {
+            return null;
+        }
+        return mode switch
+        {
+            TransportMode.Ground => "Truck",
+            TransportMode.Naval => "CargoShip",
+            TransportMode.Air => "Transport",
+            _ => null
+        };
+    }
+
     public static GroundTruthSnapshot Map(WorldSimulation simulation)
     {
         var state = simulation.State;
@@ -76,7 +91,8 @@ public static class GroundTruthMapper
                     i.Subject,
                     i.StartTick,
                     i.DueTick,
-                    i.EndTick))
+                    i.EndTick,
+                    CarrierOf(i.Kind, i.Mode)))
                 .ToList());
     }
 }

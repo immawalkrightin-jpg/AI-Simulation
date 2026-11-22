@@ -9,6 +9,11 @@ obj/
 node_modules/
 data/datasets/*
 !data/datasets/.gitkeep
+data/feedback/*
+!data/feedback/.gitkeep
 ml/models/*
 !ml/models/.gitkeep
 .DS_Store
+
+# Files removed in review, safe to delete
+_removed/

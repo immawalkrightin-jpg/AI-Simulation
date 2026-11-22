@@ -7,5 +7,6 @@ public sealed class SimulationOptions
     public bool AutoStart { get; set; } = true;
     public string GroundTruthKey { get; set; } = "dev-ground-truth-key";
     public string AiKey { get; set; } = "dev-ai-key";
+    public string FeedbackPath { get; set; } = string.Empty;
     public string[] AllowedOrigins { get; set; } = Array.Empty<string>();
 }

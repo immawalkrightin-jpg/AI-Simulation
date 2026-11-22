@@ -36,7 +36,8 @@ public sealed class AccessKeyMiddleware
     {
         if (path.StartsWithSegments("/api/ground-truth")
             || path.StartsWithSegments("/hubs/ground-truth")
-            || path.StartsWithSegments("/api/simulation"))
+            || path.StartsWithSegments("/api/simulation")
+            || path.StartsWithSegments("/api/feedback"))
         {
             return options.GroundTruthKey;
         }

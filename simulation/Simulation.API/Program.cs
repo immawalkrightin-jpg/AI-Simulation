@@ -15,6 +15,7 @@ builder.Services.AddSingleton(provider =>
 });
 builder.Services.AddSingleton<ObservationBuffer>();
 builder.Services.AddSingleton<OperationalMap>();
+builder.Services.AddSingleton<FeedbackStore>();
 builder.Services.AddSingleton<SimulationControl>();
 builder.Services.AddSingleton<SimulationBroadcaster>();
 builder.Services.AddHostedService<SimulationHost>();

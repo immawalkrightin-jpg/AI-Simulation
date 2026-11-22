@@ -10,6 +10,17 @@ namespace Simulation.Tests;
 
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
+    public string FeedbackPath { get; } = Path.Combine(Path.GetTempPath(), "sim-feedback-" + Guid.NewGuid().ToString("N"));
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing && Directory.Exists(FeedbackPath))
+        {
+            Directory.Delete(FeedbackPath, true);
+        }
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((_, configuration) =>
@@ -17,7 +28,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             {
                 ["Simulation:AutoStart"] = "false",
                 ["Simulation:GroundTruthKey"] = "gt",
-                ["Simulation:AiKey"] = "ai"
+                ["Simulation:AiKey"] = "ai",
+                ["Simulation:FeedbackPath"] = FeedbackPath
             }));
     }
 }
