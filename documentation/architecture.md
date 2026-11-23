@@ -38,7 +38,3 @@ Observations are drained from the sensor network once per tick, sequenced, kept 
 ## Interactions
 
 `WorldEngine/Interactions` spawns and resolves four kinds of operation between countries: negotiation, supply shipment (ground, naval or air), clash and missile strike. Each carries a start tick, a due tick and a planned outcome fixed at spawn from the seeded generator, so history is reproducible. Outcomes move relations, supplies, ammunition and unit strength, and relations drift back toward their starting values so the world does not collapse into permanent war. Finished operations stay visible for a fade window and are then pruned.
-
-## Map visual reference
-
-`documentation/reference/map_reference.gif`: dark tilted plane, contour lines, glowing white territory outline, red focal point with arcing projection lines, red route traces, red bracket target boxes, faint grid, small telemetry labels.

@@ -10,37 +10,66 @@
 </head>
 <body>
 <main id="stage"><canvas id="map"></canvas></main>
-<section id="telemetry" class="panel">
-<header><span id="link" class="link" data-state="connecting"></span><h1>Window A, ground truth</h1></header>
-<dl id="clock" class="rows"></dl>
-<h2>Countries</h2>
-<div id="countries"></div>
-<h2>Relations</h2>
-<dl id="relations" class="rows"></dl>
-<h2>Operations</h2>
-<ol id="operations"></ol>
-<h2>Events</h2>
-<ol id="events"></ol>
-<h2>Line language</h2>
-<dl class="rows legend">
-<dt><svg viewBox="0 0 40 10"><line class="w" x1="0" y1="5" x2="40" y2="5" stroke-dasharray="6 6"/></svg></dt><dd>Negotiation</dd>
-<dt><svg viewBox="0 0 40 10"><line class="w" x1="0" y1="5" x2="40" y2="5"/><path class="w f" d="M20 1L24 5L20 9L16 5Z"/></svg></dt><dd>Talks concluded</dd>
-<dt><svg viewBox="0 0 40 10"><line class="w" x1="0" y1="5" x2="40" y2="5"/><rect class="w f" x="34" y="2" width="6" height="6"/></svg></dt><dd>Supply, ground</dd>
-<dt><svg viewBox="0 0 40 10"><line class="w" x1="0" y1="5" x2="40" y2="5" stroke-dasharray="2 5"/></svg></dt><dd>Supply, naval</dd>
-<dt><svg viewBox="0 0 40 10"><line class="w" x1="0" y1="5" x2="40" y2="5" stroke-dasharray="12 6"/></svg></dt><dd>Supply, air</dd>
-<dt><svg viewBox="0 0 40 10"><line class="r" x1="0" y1="5" x2="28" y2="5" stroke-dasharray="10 4"/><path class="r" d="M30 1L38 9M38 1L30 9"/></svg></dt><dd>Lost or collapsed</dd>
-<dt><svg viewBox="0 0 40 10"><line class="r" x1="0" y1="5" x2="14" y2="5" stroke-dasharray="10 4"/><path class="r" d="M18 1H16V3M22 1H24V3M18 9H16V7M22 9H24V7"/><line class="r" x1="26" y1="5" x2="40" y2="5" stroke-dasharray="10 4"/></svg></dt><dd>Clash</dd>
-<dt><svg viewBox="0 0 40 10"><path class="r" d="M0 9Q20 -8 40 9"/><circle class="r f" cx="20" cy="2.5" r="2"/></svg></dt><dd>Missile</dd>
-<dt><svg viewBox="0 0 40 10"><line class="r faint" x1="0" y1="5" x2="40" y2="5" stroke-dasharray="1 5"/></svg></dt><dd>Hostile relation</dd>
-<dt><svg viewBox="0 0 40 10"><line class="w faint" x1="0" y1="5" x2="40" y2="5"/></svg></dt><dd>Allied relation</dd>
-</dl>
-</section>
-<aside id="inspector" class="panel" hidden></aside>
-<nav id="controls">
+
+<header id="hud" class="float">
+<span id="link" class="link" data-state="connecting" title="connecting"></span>
+<span class="brand">Window A</span>
+<span class="stat"><i>Tick</i><b id="hud-tick">0</b></span>
+<span class="stat"><i>Time</i><b id="hud-time">0 s</b></span>
+<span id="hud-state" class="state" data-state="running">Running</span>
+<span class="sep"></span>
 <button id="toggle" type="button">Pause</button>
 <button type="button" data-step="1">Step 1</button>
 <button type="button" data-step="10">Step 10</button>
+<button id="terminal-toggle" type="button">Terminal</button>
+<label class="speed"><span>Speed</span>
+<select id="speed" aria-label="Simulation speed">
+<option value="0.5">0.5x</option>
+<option value="1" selected>1x</option>
+<option value="2">2x</option>
+<option value="4">4x</option>
+</select>
+</label>
+</header>
+
+<nav id="crumb" class="float" aria-label="View">
+<button type="button" id="crumb-world">WORLD</button>
+<span id="crumb-sep" hidden>&gt;</span>
+<b id="crumb-name" hidden></b>
 </nav>
+
+<div id="side">
+<section id="dossier" class="panel" hidden></section>
+<aside id="inspector" class="panel" hidden></aside>
+<section id="terminal" class="panel" aria-label="Operator terminal" hidden>
+<header><h1>Operator terminal</h1></header>
+<div id="terminal-log" role="log" aria-live="polite"></div>
+<form id="terminal-form" autocomplete="off">
+<label id="terminal-prompt" for="terminal-input">&gt;</label>
+<input id="terminal-input" type="text" spellcheck="false" autocapitalize="off" maxlength="2100">
+</form>
+</section>
+</div>
+
+<section id="log" class="float" data-open="false">
+<header><button type="button" id="log-toggle" aria-expanded="false">Events</button><span id="log-hint">click to expand</span></header>
+<ol id="log-list"></ol>
+</section>
+
+<nav id="camera" class="float" aria-label="Camera">
+<button type="button" id="cam-world" title="World view">World</button>
+<button type="button" id="cam-theatre" title="Theatre view (Europe)">Theatre</button>
+<button type="button" id="cam-in" title="Zoom in" aria-label="Zoom in">+</button>
+<button type="button" id="cam-out" title="Zoom out" aria-label="Zoom out">&minus;</button>
+<button type="button" id="cam-tilt" title="Flat or oblique">Tilt</button>
+<button type="button" id="cam-reset" title="Reset view" aria-label="Reset view">&#8634;</button>
+<button type="button" id="cam-manual" title="Symbol manual (L)" aria-label="Symbol manual">?</button>
+</nav>
+
+<aside id="mini" class="float" hidden></aside>
+<section id="manual" class="panel" hidden role="dialog" aria-label="Symbol manual"></section>
+<div id="tip" hidden></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>

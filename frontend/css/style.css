@@ -1,3 +1,7 @@
+/* Window A: an intelligence workstation. Floating panels over one dark map.
+   Colour roles (same as js/theme.js): red = the model country, hostile events and alerts only; white = active
+   information; gray = inactive; one cool tint for sensor coverage, drawn on the canvas. */
+
 :root {
   --bg: #060607;
   --ink: #ecece9;
@@ -5,6 +9,7 @@
   --dim: #3b3d40;
   --line: #2a2c2f;
   --red: #ff2b2b;
+  --panel: rgba(6, 6, 7, 0.78);
   --font: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
 }
 
@@ -22,22 +27,11 @@ body {
   overflow: hidden;
 }
 
+/* Map and depth haze ------------------------------------------------------------------------------------ */
+
 #stage {
   position: fixed;
   inset: 0;
-  cursor: grab;
-}
-
-#stage:active {
-  cursor: grabbing;
-}
-
-#stage::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.78) 100%);
 }
 
 canvas {
@@ -46,22 +40,255 @@ canvas {
   height: 100%;
 }
 
+/* Soft haze at the far (top) edge and a faint darkening toward the corners. No hard vignette. */
+#stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(6, 6, 7, 0.9) 0%, rgba(6, 6, 7, 0.55) 9%, rgba(6, 6, 7, 0) 30%),
+    radial-gradient(ellipse at 50% 55%, transparent 62%, rgba(6, 6, 7, 0.42) 100%);
+}
+
+/* Scrollbars, in theme ---------------------------------------------------------------------------------- */
+
+#side,
+#manual,
+#log-list,
 .panel {
-  position: fixed;
-  width: min(264px, calc(100% - 32px));
-  padding: 12px 14px;
-  background: rgba(6, 6, 7, 0.74);
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+  overflow-x: hidden;
+}
+
+#side::-webkit-scrollbar,
+#manual::-webkit-scrollbar,
+#log-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#side::-webkit-scrollbar-thumb,
+#manual::-webkit-scrollbar-thumb,
+#log-list::-webkit-scrollbar-thumb {
+  background: var(--dim);
+}
+
+#side::-webkit-scrollbar-track,
+#manual::-webkit-scrollbar-track,
+#log-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Floating surfaces ------------------------------------------------------------------------------------- */
+
+.float,
+.panel,
+#tip {
+  background: var(--panel);
   border: 1px solid var(--line);
   backdrop-filter: blur(3px);
 }
 
+.float {
+  position: fixed;
+  z-index: 5;
+}
+
+button,
+select {
+  font: 500 13px var(--font);
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: -3px;
+}
+
+select {
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* HUD: tick, clock, state and controls, always visible ------------------------------------------------- */
+
+#hud {
+  top: 14px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 0 12px;
+  height: 36px;
+  max-width: calc(100% - 32px);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+#hud .brand {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#hud .stat {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+#hud .stat i {
+  font-style: normal;
+  color: var(--mid);
+}
+
+#hud .stat b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5ch;
+}
+
+#hud .state {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+#hud .state[data-state="paused"] {
+  color: var(--mid);
+  border-style: dashed;
+}
+
+#hud .sep {
+  align-self: stretch;
+  width: 1px;
+  background: var(--line);
+}
+
+#hud button {
+  align-self: stretch;
+  padding: 0 12px;
+  border-left: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+#hud .speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--mid);
+  border-left: 1px solid var(--line);
+}
+
+.link {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border: 1px solid var(--ink);
+  background: transparent;
+}
+
+.link[data-state="live"] {
+  background: var(--ink);
+}
+
+/* Lost connection is an alert, so it may be red. */
+.link[data-state="offline"] {
+  border-color: var(--red);
+  background: var(--red);
+  animation: blink 1.2s steps(2) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Breadcrumb: WORLD > SOVIET UNION ---------------------------------------------------------------------- */
+
+#crumb {
+  top: 58px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding-right: 12px;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+#crumb button {
+  align-self: stretch;
+  padding: 0 12px;
+  color: var(--mid);
+  letter-spacing: inherit;
+  font-size: inherit;
+}
+
+#crumb button:hover {
+  color: var(--ink);
+}
+
+#crumb span {
+  color: var(--dim);
+}
+
+#crumb b {
+  font-weight: 600;
+}
+
+/* Right column: dossier and inspector ------------------------------------------------------------------- */
+
+#side {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 6;
+  width: 288px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+#side > * {
+  pointer-events: auto;
+}
+
+.panel {
+  position: relative;
+  padding: 12px 14px;
+}
+
+/* Corner marks, neutral. Red is not decoration. */
 .panel::before,
 .panel::after {
   content: "";
   position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 1px solid var(--red);
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--mid);
 }
 
 .panel::before {
@@ -78,64 +305,20 @@ canvas {
   border-top: 0;
 }
 
-#telemetry {
-  top: 16px;
-  left: 16px;
-  max-height: calc(100% - 96px);
-  overflow-y: auto;
-}
-
-#inspector {
-  top: 16px;
-  right: 16px;
-}
-
-#inspector[hidden] {
-  display: none;
-}
-
-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-h1 {
+.panel h1 {
   font-size: 15px;
   font-weight: 600;
 }
 
-h2 {
-  margin: 14px 0 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--mid);
-  border-top: 1px solid var(--line);
+.panel h2 {
+  margin: 12px 0 6px;
   padding-top: 8px;
-}
-
-.link {
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--ink);
-  background: transparent;
-}
-
-.link[data-state="live"] {
-  background: var(--ink);
-}
-
-.link[data-state="offline"] {
-  border-color: var(--red);
-  background: var(--red);
-  animation: blink 1.2s steps(2) infinite;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0.2;
-  }
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mid);
 }
 
 .rows {
@@ -151,174 +334,430 @@ h2 {
 .rows dd {
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
-
-.country {
-  margin-bottom: 6px;
-}
-
-.country > div {
-  display: flex;
-  justify-content: space-between;
-}
-
-.country.model > div:first-child {
-  color: var(--red);
-}
-
-h3 {
-  margin: 10px 0 4px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-.bars {
-  gap: 4px;
-}
-
-.bars .bar {
-  flex: 1;
-}
-
-.bar {
-  height: 3px;
-  margin-top: 3px;
-  background: var(--line);
-}
-
-.bar i {
-  display: block;
-  height: 100%;
-  background: var(--ink);
-}
-
-.bar.low i {
-  background: var(--red);
-}
-
-#events,
-#operations {
-  list-style: none;
-  padding: 0;
-}
-
-#events li,
-#operations li {
-  padding: 2px 0;
-  color: var(--mid);
-}
-
-#events li.hostile,
-#operations li.hostile {
-  color: var(--red);
-}
-
-#events li.empty,
-#operations li.empty {
-  color: var(--dim);
-}
-
-#events b,
-#operations b {
-  margin-right: 6px;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-#operations li.hostile b {
-  color: var(--red);
-}
-
-.legend {
-  align-items: center;
-}
-
-.legend dt {
-  display: flex;
-}
-
-.legend svg {
-  width: 40px;
-  height: 10px;
-  fill: none;
-  stroke-width: 1.2;
-  overflow: visible;
-}
-
-.legend .w {
-  stroke: var(--ink);
-}
-
-.legend .r {
-  stroke: var(--red);
-}
-
-.legend .f {
-  fill: currentColor;
-}
-
-.legend .w.f {
-  fill: var(--ink);
-}
-
-.legend .r.f {
-  fill: var(--red);
-}
-
-.legend .faint {
-  opacity: 0.55;
+  overflow-wrap: anywhere;
 }
 
 #inspector h1 {
   margin-bottom: 8px;
 }
 
-#controls {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
+/* Dossier */
+
+.dossier-head {
   display: flex;
-  transform: translateX(-50%);
-  border: 1px solid var(--line);
-  background: rgba(6, 6, 7, 0.74);
+  flex-direction: column;
+  gap: 2px;
 }
 
-#controls button {
-  padding: 8px 18px;
-  font: 500 13px var(--font);
+/* The model country is the hero, so its name may be red. */
+.dossier-head h1.model {
+  color: var(--red);
+}
+
+.dossier-head .tag {
+  color: var(--mid);
+  font-size: 12px;
+}
+
+.dossier-section:first-of-type h2 {
+  border-top: 0;
+}
+
+.meter {
+  margin-bottom: 8px;
+}
+
+.meter-head {
+  display: flex;
+  justify-content: space-between;
+}
+
+.meter-head span {
+  color: var(--mid);
+}
+
+.meter-head b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Outlined bar. Low value: dim fill and a tick on the low line. Never red. */
+.meter-bar {
+  position: relative;
+  height: 6px;
+  margin: 3px 0 2px;
+  border: 1px solid rgba(236, 236, 233, 0.55);
+}
+
+.meter-bar i {
+  display: block;
+  height: 100%;
+  background: rgba(236, 236, 233, 0.9);
+}
+
+.meter.low .meter-bar i {
+  background: rgba(236, 236, 233, 0.45);
+}
+
+.meter.low .meter-bar::after {
+  content: "";
+  position: absolute;
+  left: 30%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--ink);
+}
+
+.meter small {
+  color: var(--mid);
+  font-size: 11px;
+}
+
+.dossier-list {
+  list-style: none;
+  padding: 0;
+}
+
+.dossier-list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 2px 0;
+}
+
+.dossier-list li span {
+  flex: none;
+}
+
+.dossier-list li b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.dossier-list li small {
+  margin-left: auto;
+  color: var(--mid);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.dossier-list li.empty {
+  color: var(--dim);
+}
+
+.dossier-list li.hostile,
+.dossier-list li.hostile small {
+  color: var(--red);
+}
+
+.back {
+  width: 100%;
+  margin-top: 14px;
+  padding: 7px 0;
+  border: 1px solid var(--line);
+}
+
+/* Event strip -------------------------------------------------------------------------------------------- */
+
+#log {
+  left: 16px;
+  bottom: 20px;
+  width: min(440px, calc(100% - 32px));
+  padding: 4px 10px 6px;
+}
+
+#log header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#log header button {
+  padding: 2px 6px 2px 0;
+  color: var(--mid);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+#log header button:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
+#log-hint {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+#log-list {
+  list-style: none;
+  padding: 0;
+  max-height: 3.4em;
+  overflow-y: hidden;
+}
+
+#log[data-open="true"] #log-list {
+  max-height: 14em;
+  overflow-y: auto;
+}
+
+#log-list li {
+  padding: 1px 0;
+  color: var(--mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#log[data-open="true"] #log-list li {
+  white-space: normal;
+}
+
+#log-list li b {
+  margin-right: 8px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+#log-list li.hostile,
+#log-list li.hostile b {
+  color: var(--red);
+}
+
+#log-list li.empty {
+  color: var(--dim);
+}
+
+/* Camera buttons and "in this view" ---------------------------------------------------------------------- */
+
+#camera {
+  right: 16px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+#camera button {
+  min-width: 64px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+#camera button:last-child {
+  border-bottom: 0;
+}
+
+#mini {
+  right: 92px;
+  bottom: 20px;
+  width: 200px;
+  max-height: 46%;
+  padding: 8px 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+
+#mini h2 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.mini-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-row canvas {
+  flex: none;
+  width: 52px;
+  height: 26px;
+}
+
+.mini-row span {
+  overflow-wrap: anywhere;
+}
+
+/* Symbol manual ------------------------------------------------------------------------------------------ */
+
+#manual {
+  position: fixed;
+  z-index: 20;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, calc(100% - 32px));
+  max-height: 84%;
+  overflow-y: auto;
+  padding: 16px 20px 20px;
+  background: rgba(6, 6, 7, 0.92);
+}
+
+.manual-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.manual-head h1 {
+  font-size: 17px;
+}
+
+.manual-head .hint {
+  margin-right: auto;
+  color: var(--mid);
+  font-size: 12px;
+}
+
+.manual-close {
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+}
+
+.manual-body h2 {
+  margin-top: 16px;
+}
+
+.manual-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.manual-row canvas {
+  flex: none;
+  width: 52px;
+  height: 26px;
+}
+
+.manual-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.manual-text b {
+  font-weight: 600;
+}
+
+.manual-text span {
+  color: var(--mid);
+  overflow-wrap: anywhere;
+}
+
+/* Tooltip ------------------------------------------------------------------------------------------------ */
+
+#tip {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  top: 0;
+  max-width: 260px;
+  padding: 8px 10px;
+  pointer-events: none;
+}
+
+#tip b {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* Small screens ------------------------------------------------------------------------------------------ */
+
+@media (max-width: 700px) {
+  #hud {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding: 4px 0 0 10px;
+  }
+
+  #hud .brand {
+    display: none;
+  }
+
+  #hud button,
+  #hud .speed {
+    padding: 8px 10px;
+  }
+
+  #side {
+    top: auto;
+    bottom: 70px;
+    max-height: 46%;
+  }
+
+  #log,
+  #mini {
+    display: none;
+  }
+}
+
+#terminal-log {
+  height: 180px;
+  margin-top: 8px;
+  overflow-y: auto;
+  font: 12px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+
+#terminal-log div {
+  padding: 1px 0;
+  color: var(--mid);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#terminal-log .echo,
+#terminal-log .ok {
+  color: var(--ink);
+}
+
+#terminal-log .error {
+  color: var(--red);
+}
+
+#terminal-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font: 12px ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+#terminal-form:focus-within {
+  border-top-color: var(--ink);
+}
+
+#terminal-prompt {
+  flex: none;
+  color: var(--mid);
+  white-space: nowrap;
+}
+
+#terminal-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
   color: var(--ink);
   background: transparent;
   border: 0;
-  border-right: 1px solid var(--line);
-  cursor: pointer;
-}
-
-#controls button:last-child {
-  border-right: 0;
-}
-
-#controls button:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-#controls button:focus-visible {
-  outline: 1px solid var(--red);
-  outline-offset: -3px;
-}
-
-@media (max-width: 700px) {
-  #telemetry {
-    max-height: 42%;
-  }
-
-  #inspector {
-    top: auto;
-    right: 16px;
-    bottom: 70px;
-  }
+  font: inherit;
+  outline: none;
+  caret-color: var(--ink);
 }
 
 @media (prefers-reduced-motion: reduce) {

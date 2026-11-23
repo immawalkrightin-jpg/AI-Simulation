@@ -1,0 +1,161 @@
+import { symbolName } from "../units/symbols.js";
+
+const KIND_LABELS = {
+  Infantry: "Infantry",
+  Tank: "Armor",
+  Artillery: "Artillery",
+  Truck: "Supply convoy",
+  Warship: "Naval unit",
+  Fighter: "Air unit",
+  Unknown: "Unknown unit"
+};
+
+const CARRIER_LABELS = { Truck: "Truck", CargoShip: "Cargo ship", Transport: "Transport plane", Helicopter: "Helicopter" };
+const BLOC_LABELS = { East: "East bloc", West: "West bloc", NonAligned: "Non-aligned" };
+const OPERATION_LABELS = { Negotiation: "Negotiation", SupplyShipment: "Supply shipment", Clash: "Clash", MissileStrike: "Missile strike" };
+
+export const LOW_SHARE = 0.3;
+
+export const kindLabel = (kind) => KIND_LABELS[symbolName(kind)] || "Unknown unit";
+export const carrierLabel = (carrier) => CARRIER_LABELS[carrier] || carrier;
+export const blocLabel = (bloc) => BLOC_LABELS[bloc] || bloc;
+export const operationLabel = (kind) => OPERATION_LABELS[kind] || kind;
+
+export function percent(value, max) {
+  if (!max || max <= 0) {
+    return "n/a";
+  }
+  return `${Math.round(Math.min(1, Math.max(0, value / max)) * 100)}%`;
+}
+
+export function routeText(snapshot, item) {
+  const name = (id) => {
+    const country = snapshot.countries.find((c) => c.id === id);
+    return country ? country.name : id;
+  };
+  return `${name(item.source)} to ${name(item.target)}`;
+}
+
+export function tooltipFor(snapshot, hit) {
+  if (!snapshot || !hit) {
+    return null;
+  }
+  if (hit.type === "unit") {
+    const unit = snapshot.units.find((u) => u.id === hit.id);
+    if (!unit) {
+      return null;
+    }
+    return {
+      title: `${kindLabel(unit.kind)} ${unit.owner}-${unit.id}`,
+      rows: [
+        ["Owner", unit.owner],
+        ["Status", unit.status],
+        ["Strength", `${Math.round(unit.strength)}${hit.max ? ` (${percent(unit.strength, hit.max)})` : ""}`]
+      ]
+    };
+  }
+  if (hit.type === "sensor") {
+    const sensor = snapshot.sensors.find((s) => s.id === hit.id);
+    if (!sensor) {
+      return null;
+    }
+    return {
+      title: `${sensor.kind} ${sensor.owner}-${sensor.id}`,
+      rows: [
+        ["Owner", sensor.owner],
+        ["Range", String(Math.round(sensor.range))]
+      ]
+    };
+  }
+  if (hit.type === "shipment") {
+    const item = snapshot.interactions.find((i) => i.id === hit.id);
+    if (!item) {
+      return null;
+    }
+    return {
+      title: "Supply shipment",
+      rows: [
+        ["Carrier", carrierLabel(hit.carrier || item.carrier) || "unknown"],
+        ["Mode", item.mode],
+        ["Cargo", String(Math.round(item.cargo))],
+        ["Route", routeText(snapshot, item)],
+        ["Status", item.status]
+      ]
+    };
+  }
+  if (hit.type === "cluster") {
+    const counts = new Map();
+    for (const id of hit.ids) {
+      const unit = snapshot.units.find((u) => u.id === id);
+      if (unit) {
+        const label = kindLabel(unit.kind);
+        counts.set(label, (counts.get(label) || 0) + 1);
+      }
+    }
+    return {
+      title: `${hit.ids.length} units`,
+      rows: [...counts.entries()].map(([label, count]) => [label, String(count)]).concat([["Action", "Click to spread"]])
+    };
+  }
+  if (hit.type === "country") {
+    const country = snapshot.countries.find((c) => c.id === hit.id);
+    if (!country) {
+      return null;
+    }
+    return { title: country.name, rows: [["Bloc", blocLabel(country.bloc)], ["Action", "Click to open"]] };
+  }
+  return null;
+}
+
+export function dossierFor(snapshot, id, peaks) {
+  const country = snapshot.countries.find((c) => c.id === id);
+  if (!country) {
+    return null;
+  }
+  const own = snapshot.units.filter((u) => u.owner === id);
+  const groups = new Map();
+  for (const unit of own) {
+    const label = kindLabel(unit.kind);
+    const entry = groups.get(label) || { label, total: 0, active: 0, moving: 0, destroyed: 0 };
+    entry.total++;
+    if (unit.status === "Destroyed") {
+      entry.destroyed++;
+    } else {
+      entry.active++;
+      if (unit.status === "Moving") {
+        entry.moving++;
+      }
+    }
+    groups.set(label, entry);
+  }
+  const operations = snapshot.interactions
+    .filter((i) => i.endTick == null && (i.source === id || i.target === id))
+    .map((i) => ({
+      kind: operationLabel(i.kind),
+      hostile: i.kind === "Clash" || i.kind === "MissileStrike",
+      direction: i.source === id ? "out" : "in",
+      other: i.source === id ? i.target : i.source,
+      detail: i.kind === "SupplyShipment" ? `${carrierLabel(i.carrier) || i.mode} ${Math.round(i.cargo)}` : i.kind === "Negotiation" ? i.subject : ""
+    }));
+  const relations = snapshot.relations
+    .filter((r) => r.first === id || r.second === id)
+    .map((r) => ({ other: r.first === id ? r.second : r.first, value: r.value, state: r.state }))
+    .sort((a, b) => a.value - b.value);
+  const peak = (key, value) => Math.max(peaks.get(key) || 0, value);
+  const suppliesPeak = peak(`${id}:supplies`, country.supplies);
+  const ammunitionPeak = peak(`${id}:ammunition`, country.ammunition);
+  peaks.set(`${id}:supplies`, suppliesPeak);
+  peaks.set(`${id}:ammunition`, ammunitionPeak);
+  return {
+    id,
+    name: country.name,
+    bloc: blocLabel(country.bloc),
+    isModel: country.isModel,
+    supplies: { value: country.supplies, ratio: suppliesPeak > 0 ? country.supplies / suppliesPeak : 0 },
+    ammunition: { value: country.ammunition, ratio: ammunitionPeak > 0 ? country.ammunition / ammunitionPeak : 0 },
+    units: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)),
+    operations,
+    hostile: relations.slice(0, 3).filter((r) => r.value < 0),
+    closest: relations.slice(-3).reverse().filter((r) => r.value > 0)
+  };
+}

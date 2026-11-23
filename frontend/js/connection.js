@@ -18,11 +18,19 @@ export class GroundTruthLink {
     return response.json();
   }
 
+  // Reports the clock state: paused flag for the buttons, the full status (speed) for the speed control.
+  publish(status) {
+    this.handlers.onPaused(status.paused);
+    if (this.handlers.onStatus) {
+      this.handlers.onStatus(status);
+    }
+  }
+
   async start() {
     this.handlers.onLink("connecting");
     try {
       this.handlers.onSnapshot(await this.request("/api/ground-truth/snapshot"));
-      this.handlers.onPaused((await this.request("/api/simulation/status")).paused);
+      this.publish(await this.request("/api/simulation/status"));
       await this.openHub();
       this.handlers.onLink("live");
       this.poll();
@@ -65,16 +73,26 @@ export class GroundTruthLink {
     this.polling = true;
     setInterval(async () => {
       try {
-        this.handlers.onPaused((await this.request("/api/simulation/status")).paused);
+        this.publish(await this.request("/api/simulation/status"));
       } catch {
         return;
       }
     }, 3000);
   }
 
-  async control(action, count) {
-    const query = action === "step" ? `?count=${count}` : "";
-    const status = await this.request(`/api/simulation/${action}${query}`, "POST");
-    this.handlers.onPaused(status.paused);
+  // Query string for a simulation action: step takes a count, speed takes a multiplier.
+  static query(action, value) {
+    if (action === "step") {
+      return `?count=${value}`;
+    }
+    if (action === "speed") {
+      return `?value=${value}`;
+    }
+    return "";
+  }
+
+  async control(action, value) {
+    const status = await this.request(`/api/simulation/${action}${GroundTruthLink.query(action, value)}`, "POST");
+    this.publish(status);
   }
 }
