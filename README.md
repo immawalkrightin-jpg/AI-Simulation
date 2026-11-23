@@ -1,6 +1,6 @@
 # AI-Simulation
 
-Autonomous AI geopolitical and military simulation. The simulation owns ground truth; the AI builds its own operational picture from partial, delayed and uncertain observations.
+Autonomous AI geopolitical and military simulation. The simulation owns ground truth; the AI builds its own operational picture from partial, delayed and uncertain observations which was inspired by the recent hit Iron Nest.
 
 ## Layout
 
