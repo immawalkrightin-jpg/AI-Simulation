@@ -32,6 +32,8 @@ class FakeApi:
         self.paused = False
         self.tick = 0
         self.sensors = [{"id": 1, "kind": "Radar", "x": 100.0, "y": 100.0, "range": 400.0}]
+        self.units: list[dict] = []
+        self.model_id = "MDL"
         self.observations: list[dict] = []
         self.sequence = 0
         self.points: dict[str, dict] = {}
@@ -54,7 +56,7 @@ class FakeApi:
 
             def _authorised(self) -> bool:
                 api.requests.append((self.command, self.path))
-                required = api.operator_key if self.path.startswith("/api/simulation") else api.ai_key
+                required = api.operator_key if self.path.startswith(("/api/simulation", "/api/ground-truth")) else api.ai_key
                 if self.headers.get("X-Access-Key") != required:
                     self._send(401)
                     return False
@@ -75,6 +77,8 @@ class FakeApi:
                         "observations": [o for o in api.observations if o["sequence"] > after]})
                 elif parsed.path == "/api/ai/points":
                     self._send(200, {"version": api.version, "points": list(api.points.values())})
+                elif parsed.path == "/api/ground-truth/snapshot":
+                    self._send(200, api.truth())
                 elif parsed.path == "/api/simulation/status":
                     self._send(200, api.status())
                 else:
@@ -140,6 +144,25 @@ class FakeApi:
     @property
     def base(self) -> str:
         return f"http://127.0.0.1:{self.server.server_address[1]}"
+
+    def truth(self) -> dict:
+        return {
+            "tick": self.tick,
+            "elapsedSeconds": float(self.tick),
+            "width": self.width,
+            "height": self.height,
+            "countries": [
+                {"id": self.model_id, "name": "Model", "x": 0.0, "y": 0.0, "supplies": 0.0,
+                 "ammunition": 0.0, "bloc": "West", "isModel": True},
+                {"id": "OPP", "name": "Opponent", "x": 0.0, "y": 0.0, "supplies": 0.0,
+                 "ammunition": 0.0, "bloc": "East", "isModel": False},
+            ],
+            "units": [dict(unit) for unit in self.units],
+            "relations": [],
+            "sensors": [{**sensor, "owner": self.model_id} for sensor in self.sensors],
+            "events": [],
+            "interactions": [],
+        }
 
     def status(self) -> dict:
         return {"tick": self.tick, "paused": self.paused, "seed": self.seed}

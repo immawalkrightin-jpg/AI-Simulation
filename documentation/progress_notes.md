@@ -33,6 +33,15 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - One-line reports should use underscores or a number for the category: `operating alpha 12 friendly_fire note` or `operating alpha 12 3 note`. A spaced `friendly fire` splits wrongly.
 - Report convention: `operating [name] [number]`, then category and note, or all in one line.
 
+## Milestone 13: ground-truth evaluator (written, NOT yet verified)
+- `ml/evaluation/` is the only Python package that reads ground truth. Agent, training, environment, registry and feedback code never mention it, and a test enforces that.
+- `scoring.py`: scores the AI's `Tracking` points against real non-destroyed units. Metrics: recall over units its sensors could reach, precision, mean position error, false tracks, missed units, tracks sitting on its own units, and precision of `Confirmed` tracks. Undefined ratios score 1.0.
+- `evaluator.py`: `TruthClient` (operator key) and `EpisodeEvaluator` (per-step scores and an episode summary).
+- `runner.py`: `evaluate_version` runs a version over a list of seeds and records the averaged metrics in the registry, so versions can be compared.
+- `run_episode` takes an optional evaluator and evaluate_every. Summaries gain `metrics`.
+- Not covered yet: prediction accuracy (`prd-` points), friendly-fire and casualties, supply outcomes. These need actions the agent does not take yet. There is still no reward function.
+- Tests: `ml/tests/test_evaluation.py`.
+
 ## Still open
 - README and `documentation/ai_agent.md` are not updated.
 - Window B has no HTML page and ignores the reset event.
