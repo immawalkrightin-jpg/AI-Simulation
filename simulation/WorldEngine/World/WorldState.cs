@@ -4,6 +4,7 @@ using WorldEngine.Diplomacy;
 using WorldEngine.Events;
 using WorldEngine.Interactions;
 using WorldEngine.SimulationClock;
+using WorldEngine.Territory;
 using WorldEngine.Units;
 
 namespace WorldEngine.World;
@@ -20,6 +21,7 @@ public sealed class WorldState
     public EventLog Log { get; } = new();
     public InteractionBook Interactions { get; } = new();
     public CountryId? ModelCountry { get; set; }
+    public TerritoryMap? Territory { get; set; }
     public Random Rng { get; }
     public float Width { get; }
     public float Height { get; }
@@ -52,4 +54,18 @@ public sealed class WorldState
 
     public Vector2 RandomPoint() =>
         new((float)(Rng.NextDouble() * Width), (float)(Rng.NextDouble() * Height));
+
+    public bool CanMove(Unit unit, Vector2 destination) =>
+        Territory is null
+        || Territory.SegmentPermits(unit.Kind.DomainOf(), unit.Owner, unit.Position, destination);
+
+    public bool TryOrderMove(Unit unit, Vector2 destination)
+    {
+        if (!CanMove(unit, destination))
+        {
+            return false;
+        }
+        unit.OrderMove(destination);
+        return true;
+    }
 }

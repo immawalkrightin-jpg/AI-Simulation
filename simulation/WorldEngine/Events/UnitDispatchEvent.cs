@@ -16,7 +16,7 @@ public sealed class UnitDispatchEvent : WorldEvent
         Destination = destination;
     }
 
-    public override void Apply(WorldState world) => world.GetUnit(UnitId).OrderMove(Destination);
+    public override void Apply(WorldState world) => world.TryOrderMove(world.GetUnit(UnitId), Destination);
 
     public override string Describe() =>
         $"unit {UnitId} dispatched to ({Destination.X:0},{Destination.Y:0})";

@@ -6,6 +6,8 @@ namespace WorldEngine.World;
 
 public sealed class WorldActivityGenerator
 {
+    private const int TerritoryAttempts = 16;
+
     private readonly int interval;
     private readonly double probability;
     private readonly bool dispatchUnits;
@@ -63,9 +65,27 @@ public sealed class WorldActivityGenerator
                 continue;
             }
             var unit = owned[world.Rng.Next(owned.Count)];
-            var destination = patrolRadius > 0 ? Patrol(world, unit) : world.RandomPoint();
-            world.Scheduler.Schedule(new UnitDispatchEvent(unit.Id, destination) { ScheduledTick = due });
+            var destination = ChooseDestination(world, unit);
+            if (destination is null)
+            {
+                continue;
+            }
+            world.Scheduler.Schedule(new UnitDispatchEvent(unit.Id, destination.Value) { ScheduledTick = due });
         }
+    }
+
+    private Vector2? ChooseDestination(WorldState world, Unit unit)
+    {
+        var attempts = world.Territory is null ? 1 : TerritoryAttempts;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            var candidate = patrolRadius > 0 ? Patrol(world, unit) : world.RandomPoint();
+            if (world.CanMove(unit, candidate))
+            {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private Vector2 Patrol(WorldState world, Unit unit)

@@ -2,6 +2,7 @@ using System.Numerics;
 using WorldEngine.Countries;
 using WorldEngine.Interactions;
 using WorldEngine.Sensors;
+using WorldEngine.Territory;
 using WorldEngine.Units;
 using WorldEngine.World;
 
@@ -14,6 +15,10 @@ public static class DefaultScenario
     private const string ModelId = "USSR";
     private const float MaxScatter = 37;
     private const float ScatterShare = 0.4f;
+    private const float AnchorSearch = 60;
+    private const float BerthSearch = 40;
+    private const int SettleAttempts = 6;
+    private const float SettleShrink = 0.18f;
 
     private sealed record Entry(
         string Id,
@@ -52,7 +57,7 @@ public static class DefaultScenario
         new("IND", "India", 77.2, 28.6, Bloc.NonAligned, "EURASIA", 600, 450, "ITFN"),
         new("EGY", "Egypt", 31.2, 30.0, Bloc.NonAligned, "AFRICA", 280, 250, "ITN"),
         new("YUG", "Yugoslavia", 20.5, 44.8, Bloc.NonAligned, "EURASIA", 250, 220, "IT"),
-        new("BRA", "Brazil", -47.9, -15.8, Bloc.NonAligned, "SAMERICA", 400, 300, "IFN"),
+        new("BRA", "Brazil", -47.9, -15.8, Bloc.NonAligned, "SAMERICA", 400, 300, "IN"),
         new("IRN", "Iran", 51.4, 35.7, Bloc.NonAligned, "EURASIA", 300, 250, "ITF")
     };
 
@@ -125,6 +130,41 @@ public static class DefaultScenario
         return new Vector2((float)(Math.Cos(angle) * radius), (float)(Math.Sin(angle) * radius));
     }
 
+    private static Vector2 AnchorOf(TerritoryMap? territory, CountryId owner, Vector2 capital)
+    {
+        if (territory is null || territory.Permits(Domain.Land, owner, capital))
+        {
+            return capital;
+        }
+        return territory.FindNearest(Domain.Land, owner, capital, AnchorSearch) ?? capital;
+    }
+
+    private static Vector2? SeaBerth(TerritoryMap? territory, CountryId owner, Vector2 port)
+    {
+        if (territory is null || territory.Permits(Domain.Sea, owner, port))
+        {
+            return port;
+        }
+        return territory.FindNearest(Domain.Sea, owner, port, BerthSearch);
+    }
+
+    private static Vector2 Settle(TerritoryMap? territory, Domain domain, CountryId owner, Vector2 anchor, Vector2 offset)
+    {
+        if (territory is null)
+        {
+            return anchor + offset;
+        }
+        for (var attempt = 0; attempt < SettleAttempts; attempt++)
+        {
+            var candidate = anchor + offset * (1f - attempt * SettleShrink);
+            if (territory.Permits(domain, owner, candidate))
+            {
+                return candidate;
+            }
+        }
+        return anchor;
+    }
+
     private static double BaseRelation(Entry a, Entry b)
     {
         if (a.Bloc == b.Bloc && a.Bloc != Bloc.NonAligned)
@@ -162,6 +202,8 @@ public static class DefaultScenario
     public static WorldSimulation Build(int seed)
     {
         var world = new WorldState(seed, WorldWidth, WorldHeight);
+        world.Territory = TerritoryLoader.Shared;
+        var territory = world.Territory;
         foreach (var entry in Entries)
         {
             world.Countries.Add(new Country(
@@ -194,7 +236,10 @@ public static class DefaultScenario
         {
             var owner = new CountryId(entry.Id);
             var capital = Place(entry.Longitude, entry.Latitude);
-            var maxRadius = Math.Min(MaxScatter, NearestCapitalDistance(entry) * ScatterShare);
+            var anchor = AnchorOf(territory, owner, capital);
+            var maxRadius = Math.Max(
+                0f,
+                Math.Min(MaxScatter, NearestCapitalDistance(entry) * ScatterShare) - Vector2.Distance(anchor, capital));
             var occurrences = new Dictionary<UnitKind, int>();
             for (var k = 0; k < entry.Units.Length; k++)
             {
@@ -210,20 +255,31 @@ public static class DefaultScenario
                     {
                         continue;
                     }
-                    position = Place(port.Longitude, port.Latitude);
+                    var berth = SeaBerth(territory, owner, Place(port.Longitude, port.Latitude));
+                    if (berth is null)
+                    {
+                        continue;
+                    }
+                    position = berth.Value;
                 }
                 else
                 {
                     occurrences.TryGetValue(kind.Value, out var occurrence);
                     occurrences[kind.Value] = occurrence + 1;
-                    position = capital + ScatterOffset(kind.Value, occurrence, maxRadius);
+                    position = Settle(
+                        territory,
+                        kind.Value.DomainOf(),
+                        owner,
+                        anchor,
+                        ScatterOffset(kind.Value, occurrence, maxRadius));
                 }
                 var (speed, strength) = Stats(kind.Value);
                 world.AddUnit(owner, kind.Value, position, speed, strength);
             }
         }
         var soviet = new CountryId(ModelId);
-        world.AddUnit(soviet, UnitKind.Naval, Place(131.9, 43.1), 0.12, 120);
+        var pacificBase = Place(131.9, 43.1);
+        world.AddUnit(soviet, UnitKind.Naval, SeaBerth(territory, soviet, pacificBase) ?? pacificBase, 0.12, 120);
 
         var sensors = new SensorNetwork(seed + 1000);
         sensors.Add(SensorProfiles.Radar(1, soviet, Place(37.6, 55.75)));
