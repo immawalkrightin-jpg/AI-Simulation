@@ -36,52 +36,76 @@ python -m http.server 5500
 4. API contracts and streaming hub (done)
 5. Frontend Window A map renderer (done)
 6. Cold War world and Window A line language (done)
-7. Map correctness and Cold War logic
-   - 7.1 Remove render files that do not support the map (in review)
-     - [x] Remove terrain.js
-     - [x] Remove Window B renderer, picture and link (rebuilt in 8)
-     - [x] Remove ai_panel.js and the old telemetry panel.js
-     - [ ] Run frontend tests after removal
-   - 7.2 Cold War political logic
-     - [ ] Doctrine object supplied by the scenario
-     - [ ] Patron-to-client supply flows inside each bloc
-     - [ ] Summit and arms-limitation talks between the blocs
-     - [ ] Proxy conflicts only where the Cold War had them (Korea, Vietnam, Middle East, Sino-Indian border)
-     - [ ] Escalation ladder: tension, incident, clash, missile
-     - [ ] Cool-down so relations settle instead of oscillating
-     - [ ] Event log states the cause of each event
-     - [ ] Keep no direct Soviet-American or Pact-NATO war
-     - [ ] Engine without a doctrine keeps current behaviour
-     - [ ] Tests: doctrine rules, determinism, long run
-   - 7.3 Geography in the engine
-     - [ ] Territory raster built from coldwar.json
-     - [ ] Keep `DefaultScenario.Build(int seed)` signature
-     - [ ] Land units stay inside their own territory
-     - [ ] Naval units stay at sea
-     - [ ] Patrol and dispatch destinations validated against the raster
-     - [ ] Ports validated as coastal
-     - [ ] Tests: legal start cells, long run keeps units legal
-   - 7.4 Logistics routing
-     - [ ] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
-     - [ ] Sea lane graph with chokepoints (Danish straits, GIUK, Bosporus, Gibraltar, Suez, Malacca, Panama, Cape)
-     - [ ] Land links between neighbouring countries
-     - [ ] Multi-leg shipments with hand-offs at ports
-     - [ ] Interception risk per leg and chokepoint
-     - [ ] `Route` added to `InteractionDto`
-     - [ ] Validate sea legs on water and land legs on land
-     - [ ] Tests: routes, hand-offs, bare worlds still work
-   - 7.5 Frontend route rendering
-     - [ ] Shipments follow the engine route
-     - [ ] Carrier changes at each hand-off
-     - [ ] Hand-off symbol
-     - [ ] Symbol manual and in-view legend rows
-     - [ ] Tooltip and dossier show current leg and chain
-   - 7.6 Verification
-     - [ ] Long-run invariant tests
-     - [ ] Update architecture.md and frontend.md
-8. Frontend Window B AI map with confidence-typed markers
-9. Python environment bridge and central intelligence skeleton
-10. Terminal feedback and model registry
-11. Reinforcement learning loop
-
-Each milestone is submitted for review, then committed by the owner, before the next one starts.
+7. Render pipeline cleanup (in review)
+8. Simulation reset (done)
+9. Training environment (done)
+10. Model registry (done)
+11. Feedback backend and importer
+    - [x] Feedback store, controller and contracts
+    - [x] Importer into the registry
+    - [ ] Run C# and Python tests
+12. Terminal UI
+    - [x] Report parser, API link, report dialog and history
+    - [ ] Manual check in the browser
+13. Ground-truth evaluator
+    - [x] Scoring of the AI's tracks against real units
+    - [x] Version evaluation over a list of seeds
+    - [ ] Run Python tests
+14. Window A geography (in review)
+    - [x] Territory raster built from coldwar.json
+    - [x] Keep `DefaultScenario.Build(int seed)` signature
+    - [x] Land units stay inside their own territory
+    - [x] Naval units stay at sea
+    - [x] Air units stay out of foreign airspace
+    - [x] Patrol and dispatch destinations validated against the raster
+    - [x] Ports snap to the nearest sea cell
+    - [x] Tests: legal start cells, long run keeps units legal
+    - [ ] Run `dotnet test`
+15. Unit roster and national power
+    - [ ] Tank, armored car, warship, warplane, helicopter
+    - [ ] Truck, cargo ship, cargo plane as carriers, separate from combat units
+    - [ ] Domain, speed, strength, range and role per kind
+    - [ ] Country power computed from fielded forces and stockpiles
+    - [ ] Cold War starting figures (superpowers, regional powers, small states)
+    - [ ] Power shown in the dossier
+    - [ ] Frontend symbols, manual and legend rows for the new kinds
+    - [ ] Tests: power order, one domain per kind, legal start cells
+16. Logistics routing, hand-offs and route rendering
+    - [ ] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
+    - [ ] Sea lane graph with chokepoints (Danish straits, GIUK, Bosporus, Gibraltar, Suez, Malacca, Panama, Cape)
+    - [ ] Land links between neighbouring countries
+    - [ ] Multi-leg shipments with hand-offs at ports and airfields
+    - [ ] Truck, helicopter or plane continues after a cargo ship, never a ship over land
+    - [ ] `Route` added to `InteractionDto`
+    - [ ] Validate sea legs on water and land legs on land
+    - [ ] Shipments follow the engine route in the frontend
+    - [ ] Carrier changes at each hand-off, hand-off symbol, legend rows
+    - [ ] Tooltip and dossier show current leg and chain
+    - [ ] Tests: routes, hand-offs, bare worlds still work
+17. Cold War political logic and hunting of shipments
+    - [ ] Doctrine object supplied by the scenario
+    - [ ] Patron-to-client supply flows inside each bloc
+    - [ ] Summit and arms-limitation talks between the blocs
+    - [ ] Proxy conflicts only where the Cold War had them (Korea, Vietnam, Middle East, Sino-Indian border)
+    - [ ] Escalation ladder: tension, incident, clash, missile
+    - [ ] Cool-down so relations settle instead of oscillating
+    - [ ] Transit permission: routes avoid hostile land and waters by default
+    - [ ] Hostile countries track and hunt shipments that enter their land or waters
+    - [ ] Event log states the cause of each event
+    - [ ] Keep no direct Soviet-American or Pact-NATO war
+    - [ ] Engine without a doctrine keeps current behaviour
+    - [ ] Tests: doctrine rules, determinism, long run
+18. Ambush, conquest, paralyzed zones and secondary explosions
+    - [ ] Ambush units that wait on routes and chokepoints
+    - [ ] Territory changes owner after a decisive clash
+    - [ ] Paralyzed zones, unusable by the owner until repaired
+    - [ ] Secondary explosion when a depot or stockpile is hit
+    - [ ] Frontend overlays for conquered land and paralyzed zones
+    - [ ] Tests: ownership change, paralysis and repair, determinism
+19. Randomized worlds and Window A verification
+    - [ ] Seeded variation of powers, stockpiles, relations and positions inside Cold War limits
+    - [ ] Default seed keeps the historical set-up
+    - [ ] Long-run invariant tests on default and randomized worlds
+    - [ ] Update architecture.md and frontend.md
+20. Frontend Window B AI map with confidence-typed markers
+21. Reinforcement learning loop

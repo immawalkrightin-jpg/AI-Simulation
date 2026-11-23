@@ -42,7 +42,7 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Not covered yet: prediction accuracy (`prd-` points), friendly-fire and casualties, supply outcomes. These need actions the agent does not take yet. There is still no reward function.
 - Tests: `ml/tests/test_evaluation.py`.
 
-## Milestone 14: territory and domain rules (written, NOT yet built or run here)
+## Milestone 14: Window A geography, territory and domain rules (written, NOT yet built or run here)
 - `WorldEngine/Territory/`: `TerritoryMap` (raster of `coldwar.json`: sea, free land, owner per cell, 2-unit cells) and `TerritoryLoader` (reads the map once, found by searching upward from the executable, shared by every scenario build). The map file stays the only source of geography.
 - `Units/Domain.cs`: `Domain` (Land, Sea, Air) and `UnitKind.DomainOf()`.
 - Rules in `TerritoryMap.Permits`: land units only on their own land, naval units only on water, air units over sea, free land and their own land, never over foreign land. `SegmentPermits` walks every grid cell a straight path touches, so a path cannot clip a corner.
@@ -51,14 +51,14 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - `DefaultScenario`: land and air units are placed from an anchor on their own land (the capital, or the nearest own land cell when the capital falls in the sea, as Havana does), ports snap to the nearest sea cell, scatter radius shrinks by the anchor shift so the old spacing limits still hold.
 - Tests: `TerritoryTests.cs` (synthetic maps, corner cutting, world refusal, every unit legal at start and for 1500 ticks on two seeds).
 - Checked with a Python port of the rasterizer, the grid walk and the placement against the real map: 86 of 86 units legal, spacing limits hold, 1500 simulated ticks with zero violations and 80 of 86 units moving. The C# itself has not been compiled or run.
-- Known gap: Cuba's capital marker sits in the sea on the 110m map. Shipments still run capital to capital until the routing milestone.
+- Known gap: Cuba's capital marker sits in the sea on the 110m map. Shipments still run capital to capital until milestone 16.
 
-## Window A roadmap (agreed direction, one milestone per push)
-- M15 units and power: separate unit kinds (tank, armored car, warship, warplane, helicopter, cargo ship, cargo plane, truck), each with domain, speed, strength, range and role; country power computed from what it fields and what it stockpiles, with Cold War figures. Needs frontend symbols for the new kinds.
-- M16 logistics routes and hand-offs: shipments become multi-leg (truck to port, cargo ship through sea lanes, truck or plane onward), never a cargo ship over land, with a visible hand-off between carriers. Routes avoid or accept risk through foreign and hostile territory.
-- M17 political logic: doctrine for who trades, talks and fights (patrons and clients, proxy wars, escalation ladder), transit permission, and hostile countries actively tracking and hunting shipments that enter their land or waters.
-- M18 ambush, conquest and paralysis: ambush units, territory changing owner after a decisive clash, paralyzed zones that are unusable until rebuilt, and secondary explosions when a stockpile is hit.
-- M19 randomized worlds: seeded variation of powers, relations and positions so the model faces new environments.
+## Window A roadmap (milestones 15 to 19, one per push)
+- 15 units and power: separate unit kinds (tank, armored car, warship, warplane, helicopter, cargo ship, cargo plane, truck), each with domain, speed, strength, range and role; country power computed from what it fields and what it stockpiles, with Cold War figures. Needs frontend symbols for the new kinds.
+- 16 logistics routes, hand-offs and their frontend rendering: shipments become multi-leg (truck to port, cargo ship through sea lanes, truck or plane onward), never a cargo ship over land, with a visible hand-off between carriers. Routes avoid or accept risk through foreign and hostile territory.
+- 17 political logic: doctrine for who trades, talks and fights (patrons and clients, proxy wars, escalation ladder), transit permission, and hostile countries actively tracking and hunting shipments that enter their land or waters.
+- 18 ambush, conquest and paralysis: ambush units, territory changing owner after a decisive clash, paralyzed zones that are unusable until rebuilt, and secondary explosions when a stockpile is hit.
+- 19 randomized worlds and the Window A verification pass: seeded variation of powers, relations and positions so the model faces new environments.
 
 ## Still open
 - README and `documentation/ai_agent.md` are not updated.
