@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocLabel, carrierLabel, dossierFor, kindLabel, percent, routeText, tooltipFor } from "../js/telemetry/describe.js";
+import { blocLabel, carrierLabel, dossierFor, kindLabel, percent, powerFor, routeText, tooltipFor } from "../js/telemetry/describe.js";
 
 const snapshot = {
   countries: [
-    { id: "USSR", name: "Soviet Union", bloc: "East", isModel: true, supplies: 800, ammunition: 600 },
-    { id: "POL", name: "Poland", bloc: "East", isModel: false, supplies: 300, ammunition: 200 },
-    { id: "USA", name: "United States", bloc: "West", isModel: false, supplies: 900, ammunition: 700 }
+    { id: "USSR", name: "Soviet Union", bloc: "East", isModel: true, supplies: 800, ammunition: 600, power: 130.5 },
+    { id: "POL", name: "Poland", bloc: "East", isModel: false, supplies: 300, ammunition: 200, power: 42.3 },
+    { id: "USA", name: "United States", bloc: "West", isModel: false, supplies: 900, ammunition: 700, power: 140 }
   ],
   units: [
     { id: 1, owner: "USSR", kind: "Infantry", status: "Idle", strength: 80 },
@@ -28,9 +28,15 @@ const snapshot = {
 };
 
 test("labels: kinds, carriers and blocs read as words", () => {
-  assert.equal(kindLabel("Armor"), "Armor");
-  assert.equal(kindLabel("SupplyConvoy"), "Supply convoy");
-  assert.equal(kindLabel("Air"), "Air unit");
+  assert.equal(kindLabel("Armor"), "Tank");
+  assert.equal(kindLabel("SupplyConvoy"), "Truck");
+  assert.equal(kindLabel("Air"), "Warplane");
+  assert.equal(kindLabel("Naval"), "Warship");
+  assert.equal(kindLabel("ArmoredCar"), "Armored car");
+  assert.equal(kindLabel("Warplane"), "Warplane");
+  assert.equal(kindLabel("Helicopter"), "Helicopter");
+  assert.equal(kindLabel("CargoShip"), "Cargo ship");
+  assert.equal(kindLabel("CargoPlane"), "Cargo plane");
   assert.equal(kindLabel("Zeppelin"), "Unknown unit");
   assert.equal(carrierLabel("CargoShip"), "Cargo ship");
   assert.equal(blocLabel("NonAligned"), "Non-aligned");
@@ -44,7 +50,7 @@ test("routeText uses country names", () => {
 
 test("tooltip: unit", () => {
   const tip = tooltipFor(snapshot, { type: "unit", id: 2, max: 100 });
-  assert.equal(tip.title, "Armor USSR-2");
+  assert.equal(tip.title, "Tank USSR-2");
   assert.deepEqual(tip.rows, [["Owner", "USSR"], ["Status", "Moving"], ["Strength", "100 (100%)"]]);
 });
 
@@ -74,7 +80,7 @@ test("tooltip: shipment without any carrier says unknown, never a guess", () => 
 test("tooltip: cluster counts its members by kind", () => {
   const tip = tooltipFor(snapshot, { type: "cluster", id: "c1", ids: [1, 2, 3] });
   assert.equal(tip.title, "3 units");
-  assert.deepEqual(tip.rows.find((r) => r[0] === "Armor"), ["Armor", "2"]);
+  assert.deepEqual(tip.rows.find((r) => r[0] === "Tank"), ["Tank", "2"]);
   assert.deepEqual(tip.rows.find((r) => r[0] === "Infantry"), ["Infantry", "1"]);
 });
 
@@ -94,7 +100,7 @@ test("dossier: labelled bars, grouped units, operations and relations", () => {
   assert.equal(dossier.supplies.ratio, 1);
   assert.deepEqual(
     dossier.units.map((u) => [u.label, u.total, u.active, u.moving, u.destroyed]),
-    [["Armor", 2, 1, 1, 1], ["Infantry", 1, 1, 0, 0]]
+    [["Infantry", 1, 1, 0, 0], ["Tank", 2, 1, 1, 1]]
   );
   assert.equal(dossier.operations.length, 2);
   const shipment = dossier.operations.find((o) => o.kind === "Supply shipment");
@@ -114,4 +120,18 @@ test("dossier: bars are relative to the running peak", () => {
 
 test("dossier: unknown country", () => {
   assert.equal(dossierFor(snapshot, "XXX", new Map()), null);
+});
+
+test("power: value and rank among the countries that report power", () => {
+  assert.deepEqual(powerFor(snapshot, "USA"), { value: 140, rank: 1, of: 3 });
+  assert.deepEqual(powerFor(snapshot, "USSR"), { value: 130.5, rank: 2, of: 3 });
+  assert.deepEqual(powerFor(snapshot, "POL"), { value: 42.3, rank: 3, of: 3 });
+  assert.equal(dossierFor(snapshot, "USSR", new Map()).power.rank, 2);
+});
+
+test("power: an engine that does not report it gives null, never a guess", () => {
+  const bare = { ...snapshot, countries: snapshot.countries.map(({ power, ...rest }) => rest) };
+  assert.equal(powerFor(bare, "USSR"), null);
+  assert.equal(dossierFor(bare, "USSR", new Map()).power, null);
+  assert.equal(powerFor(snapshot, "XXX"), null);
 });

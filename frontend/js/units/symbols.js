@@ -8,17 +8,33 @@
 
 const TOP_VIEW = new Set(["Fighter", "Transport", "Helicopter", "Missile"]);
 
-const ALIASES = { Air: "Fighter", SupplyConvoy: "Truck", Naval: "Warship", Armor: "Tank" };
+// Shapes that fly. They are drawn slightly above the ground and rotate to their heading.
+const AIRBORNE = new Set(["Fighter", "Transport", "Helicopter"]);
+
+// Engine kind -> shape. Warplane and the legacy Air share the fighter, CargoPlane the transport, and the
+// generic kinds from before milestone 15 keep the shape of their specific successor.
+const ALIASES = {
+  Air: "Fighter",
+  Warplane: "Fighter",
+  CargoPlane: "Transport",
+  SupplyConvoy: "Truck",
+  Naval: "Warship",
+  Armor: "Tank"
+};
 
 // Symbol rows of the manual, in order. `id` is what the renderer reports as "present in this view".
 // Lines, markers and colour roles are added in legend.js.
 export const LEGEND = [
   { id: "unit:Infantry", group: "Units", kind: "Infantry", label: "Infantry", meaning: "Infantry unit." },
-  { id: "unit:Tank", group: "Units", kind: "Tank", label: "Armor", meaning: "Armored unit, tanks." },
+  { id: "unit:Tank", group: "Units", kind: "Tank", label: "Tank", meaning: "Tracked armored fighting unit." },
+  { id: "unit:ArmoredCar", group: "Units", kind: "ArmoredCar", label: "Armored car", meaning: "Wheeled armored unit, lighter and faster than a tank." },
   { id: "unit:Artillery", group: "Units", kind: "Artillery", label: "Artillery", meaning: "Artillery unit." },
-  { id: "unit:Truck", group: "Units", kind: "Truck", label: "Supply convoy", meaning: "Supply convoy unit." },
-  { id: "unit:Warship", group: "Units", kind: "Warship", label: "Naval unit", meaning: "Warship or naval formation." },
-  { id: "unit:Fighter", group: "Units", kind: "Fighter", label: "Air unit", meaning: "Combat aircraft. Drawn slightly above the ground." },
+  { id: "unit:Warship", group: "Units", kind: "Warship", label: "Warship", meaning: "Combat ship or naval formation." },
+  { id: "unit:Fighter", group: "Units", kind: "Fighter", label: "Warplane", meaning: "Combat aircraft. Drawn slightly above the ground." },
+  { id: "unit:Helicopter", group: "Units", kind: "Helicopter", label: "Helicopter", meaning: "Combat helicopter. Drawn slightly above the ground." },
+  { id: "unit:Truck", group: "Carriers", kind: "Truck", label: "Truck unit", meaning: "Carrier unit on land. Moves cargo and does not fight." },
+  { id: "unit:CargoShip", group: "Carriers", kind: "CargoShip", label: "Cargo ship unit", meaning: "Carrier unit at sea. Moves cargo and does not fight." },
+  { id: "unit:Transport", group: "Carriers", kind: "Transport", label: "Cargo plane unit", meaning: "Carrier unit in the air. Moves cargo and does not fight." },
   { id: "carrier:Truck", group: "Carriers", kind: "Truck", label: "Truck", meaning: "Supply shipment by ground." },
   { id: "carrier:CargoShip", group: "Carriers", kind: "CargoShip", label: "Cargo ship", meaning: "Supply shipment by sea." },
   { id: "carrier:Transport", group: "Carriers", kind: "Transport", label: "Transport plane", meaning: "Supply shipment by air." },
@@ -79,6 +95,16 @@ const SHAPES = {
     poly(ctx, [[-0.45, 0.12], [0.15, 0.12], [0.15, 0.4], [-0.45, 0.4]]);
     line(ctx, 0.1, 0.2, 1.15, -0.7);
     line(ctx, -0.15, 0.55, -0.95, 0.85);
+  },
+
+  // Wheeled hull with a small turret: lower and lighter than the tracked tank.
+  ArmoredCar(ctx) {
+    poly(ctx, [[-0.95, 0.28], [-0.8, 0.02], [0.6, 0.02], [0.95, 0.28], [0.95, 0.5], [-0.95, 0.5]]);
+    poly(ctx, [[-0.2, 0.02], [-0.1, -0.35], [0.35, -0.35], [0.45, 0.02]]);
+    line(ctx, 0.4, -0.2, 1.15, -0.2);
+    circle(ctx, -0.6, 0.62, 0.2);
+    circle(ctx, 0, 0.62, 0.2);
+    circle(ctx, 0.6, 0.62, 0.2);
   },
 
   Truck(ctx) {
@@ -175,6 +201,9 @@ export function symbolName(kind) {
   const name = ALIASES[kind] || kind;
   return SHAPES[name] ? name : "Unknown";
 }
+
+// True for kinds drawn above the ground (aircraft and helicopters).
+export const isAirborne = (kind) => AIRBORNE.has(symbolName(kind));
 
 // Draws one symbol centred on (x, y) with the given radius in pixels. The caller sets the stroke style
 // and line width. `fill`, when given, paints a backing colour under the outline. `dash` is a pixel dash

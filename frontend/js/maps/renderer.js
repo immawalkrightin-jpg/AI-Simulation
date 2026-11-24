@@ -5,7 +5,7 @@ import { classifyExternal, countryFrame, ringsBounds } from "./view.js";
 import { fadeLabels, placeLabels } from "./labels.js";
 import { layoutUnits } from "./cluster.js";
 import { carrierOf, screenHeading, unitHeading } from "./motion.js";
-import { drawSymbol, symbolName } from "../units/symbols.js";
+import { drawSymbol, isAirborne, symbolName } from "../units/symbols.js";
 import { DASH, backing, clusterBadge, foreignRing, glyph, headingTick, hoverRing, strengthBar } from "../units/markers.js";
 import { FONT, FONT_SMALL, HALO, INK, INK_RGB, MID, MID_RGB, RED, RED_RGB, TEAL_RGB, rgba } from "../theme.js";
 
@@ -1028,7 +1028,7 @@ export class MapRenderer {
       }
       const destroyed = unit.status === "Destroyed";
       const p = P(entry.x, entry.y, 0);
-      const altitude = unit.kind === "Air" && !destroyed ? 14 / pr.zoom : 0;
+      const altitude = isAirborne(unit.kind) && !destroyed ? 14 / pr.zoom : 0;
       const s = altitude > 0 ? P(entry.x, entry.y, altitude) : p;
       items.push({ id: unit.id, x: s.x, y: s.y, entry, unit, p, s, alpha, destroyed, foreign: interiorOn && !own && inside });
     }

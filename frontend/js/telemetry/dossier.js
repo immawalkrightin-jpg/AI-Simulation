@@ -48,6 +48,12 @@ function unitLine(group) {
   return line;
 }
 
+function powerLine(power) {
+  const line = el("li");
+  line.append(el("span", "", "Power"), el("b", "", power.value.toFixed(1)), el("small", "", `rank ${power.rank} of ${power.of}`));
+  return line;
+}
+
 function operationLine(op) {
   const line = el("li", op.hostile ? "hostile" : "");
   const arrow = op.direction === "out" ? "to" : "from";
@@ -98,6 +104,7 @@ export class Dossier {
     back.dataset.back = "1";
     this.root.replaceChildren(
       head,
+      section("National power", list(data.power ? [powerLine(data.power)] : [], "Not reported")),
       section("Stocks", meter("Supplies", data.supplies), meter("Ammunition", data.ammunition)),
       section("Units", list(data.units.map(unitLine), "No units")),
       section("Active operations", list(data.operations.map(operationLine), "None active")),

@@ -47,6 +47,12 @@ public sealed class WorldState
         return unit;
     }
 
+    public Unit AddUnit(CountryId owner, UnitKind kind, Vector2 position)
+    {
+        var spec = UnitCatalog.Of(kind);
+        return AddUnit(owner, kind, position, spec.Speed, spec.Strength);
+    }
+
     public Unit GetUnit(int id) =>
         units.TryGetValue(id, out var unit)
             ? unit

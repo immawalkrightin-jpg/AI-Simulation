@@ -2,11 +2,15 @@ import { symbolName } from "../units/symbols.js";
 
 const KIND_LABELS = {
   Infantry: "Infantry",
-  Tank: "Armor",
+  Tank: "Tank",
+  ArmoredCar: "Armored car",
   Artillery: "Artillery",
-  Truck: "Supply convoy",
-  Warship: "Naval unit",
-  Fighter: "Air unit",
+  Truck: "Truck",
+  Warship: "Warship",
+  CargoShip: "Cargo ship",
+  Fighter: "Warplane",
+  Transport: "Cargo plane",
+  Helicopter: "Helicopter",
   Unknown: "Unknown unit"
 };
 
@@ -107,6 +111,17 @@ export function tooltipFor(snapshot, hit) {
   return null;
 }
 
+export function powerFor(snapshot, id) {
+  const country = snapshot.countries.find((c) => c.id === id);
+  if (!country || typeof country.power !== "number") {
+    return null;
+  }
+  const ranked = snapshot.countries
+    .filter((c) => typeof c.power === "number")
+    .sort((a, b) => b.power - a.power || a.id.localeCompare(b.id));
+  return { value: country.power, rank: ranked.findIndex((c) => c.id === id) + 1, of: ranked.length };
+}
+
 export function dossierFor(snapshot, id, peaks) {
   const country = snapshot.countries.find((c) => c.id === id);
   if (!country) {
@@ -151,6 +166,7 @@ export function dossierFor(snapshot, id, peaks) {
     name: country.name,
     bloc: blocLabel(country.bloc),
     isModel: country.isModel,
+    power: powerFor(snapshot, id),
     supplies: { value: country.supplies, ratio: suppliesPeak > 0 ? country.supplies / suppliesPeak : 0 },
     ammunition: { value: country.ammunition, ratio: ammunitionPeak > 0 ? country.ammunition / ammunitionPeak : 0 },
     units: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)),

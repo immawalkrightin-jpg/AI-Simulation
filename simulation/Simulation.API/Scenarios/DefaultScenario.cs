@@ -20,6 +20,12 @@ public static class DefaultScenario
     private const int SettleAttempts = 6;
     private const float SettleShrink = 0.18f;
 
+    // Unit roster codes: I infantry, A artillery, K tank, C armored car, W warship, P warplane,
+    // H helicopter, T truck, G cargo ship, L cargo plane. A code is repeated for each unit of that kind.
+    // Ships need a port and are skipped for countries without one.
+    private const string SuperRoster = "IIIAAKKKKCCWWWPPPPHHTTGL";
+    private const string RegionalRoster = "IIAKKCWWPPHTG";
+
     private sealed record Entry(
         string Id,
         string Name,
@@ -33,32 +39,32 @@ public static class DefaultScenario
 
     private static readonly Entry[] Entries =
     {
-        new("USSR", "Soviet Union", 37.6, 55.75, Bloc.East, "EURASIA", 1200, 1000, "ITAFSN"),
-        new("GDR", "East Germany", 13.4, 52.5, Bloc.East, "EURASIA", 350, 300, "ITF"),
-        new("POL", "Poland", 21.0, 52.2, Bloc.East, "EURASIA", 350, 300, "ITN"),
-        new("CZE", "Czechoslovakia", 14.4, 50.1, Bloc.East, "EURASIA", 300, 250, "IAF"),
-        new("HUN", "Hungary", 19.0, 47.5, Bloc.East, "EURASIA", 250, 200, "IT"),
-        new("ROU", "Romania", 26.1, 44.4, Bloc.East, "EURASIA", 250, 200, "IN"),
-        new("BGR", "Bulgaria", 23.3, 42.7, Bloc.East, "EURASIA", 220, 180, "IN"),
-        new("PRC", "China", 116.4, 39.9, Bloc.East, "EURASIA", 900, 700, "ITANF"),
-        new("PRK", "North Korea", 125.75, 39.0, Bloc.East, "EURASIA", 200, 250, "IAN"),
-        new("VNM", "North Vietnam", 105.8, 21.0, Bloc.East, "EURASIA", 220, 220, "IAN"),
-        new("CUB", "Cuba", -82.4, 23.1, Bloc.East, "CUBA", 220, 200, "IN"),
-        new("USA", "United States", -77.0, 38.9, Bloc.West, "NAMERICA", 1200, 1000, "ITAFSN"),
-        new("CAN", "Canada", -75.7, 45.4, Bloc.West, "NAMERICA", 400, 300, "IFN"),
-        new("GBR", "United Kingdom", -0.1, 51.5, Bloc.West, "BRITAIN", 500, 400, "ITFN"),
-        new("FRA", "France", 2.35, 48.85, Bloc.West, "EURASIA", 500, 400, "ITFN"),
-        new("FRG", "West Germany", 7.1, 50.7, Bloc.West, "EURASIA", 450, 380, "ITAN"),
-        new("ITA", "Italy", 12.5, 41.9, Bloc.West, "EURASIA", 350, 300, "ITN"),
-        new("TUR", "Turkey", 32.85, 39.9, Bloc.West, "EURASIA", 300, 280, "ITAN"),
-        new("JPN", "Japan", 139.7, 35.7, Bloc.West, "JAPAN", 450, 300, "IFN"),
-        new("KOR", "South Korea", 127.0, 37.55, Bloc.West, "EURASIA", 250, 260, "ITAN"),
-        new("AUS", "Australia", 149.1, -35.3, Bloc.West, "OCEANIA", 300, 220, "IFN"),
-        new("IND", "India", 77.2, 28.6, Bloc.NonAligned, "EURASIA", 600, 450, "ITFN"),
-        new("EGY", "Egypt", 31.2, 30.0, Bloc.NonAligned, "AFRICA", 280, 250, "ITN"),
-        new("YUG", "Yugoslavia", 20.5, 44.8, Bloc.NonAligned, "EURASIA", 250, 220, "IT"),
-        new("BRA", "Brazil", -47.9, -15.8, Bloc.NonAligned, "SAMERICA", 400, 300, "IN"),
-        new("IRN", "Iran", 51.4, 35.7, Bloc.NonAligned, "EURASIA", 300, 250, "ITF")
+        new("USSR", "Soviet Union", 37.6, 55.75, Bloc.East, "EURASIA", 1200, 1000, SuperRoster),
+        new("GDR", "East Germany", 13.4, 52.5, Bloc.East, "EURASIA", 350, 300, "IIAKCPHT"),
+        new("POL", "Poland", 21.0, 52.2, Bloc.East, "EURASIA", 350, 300, "IIAKCWPHT"),
+        new("CZE", "Czechoslovakia", 14.4, 50.1, Bloc.East, "EURASIA", 300, 250, "IIAKCPT"),
+        new("HUN", "Hungary", 19.0, 47.5, Bloc.East, "EURASIA", 250, 200, "IAKCT"),
+        new("ROU", "Romania", 26.1, 44.4, Bloc.East, "EURASIA", 250, 200, "IAKCWT"),
+        new("BGR", "Bulgaria", 23.3, 42.7, Bloc.East, "EURASIA", 220, 180, "IAKCWT"),
+        new("PRC", "China", 116.4, 39.9, Bloc.East, "EURASIA", 900, 700, "IIIAAKKKCCWWPPPHTTGL"),
+        new("PRK", "North Korea", 125.75, 39.0, Bloc.East, "EURASIA", 200, 250, "IIAKCWPT"),
+        new("VNM", "North Vietnam", 105.8, 21.0, Bloc.East, "EURASIA", 220, 220, "IIAKCWPT"),
+        new("CUB", "Cuba", -82.4, 23.1, Bloc.East, "CUBA", 220, 200, "IAKCWT"),
+        new("USA", "United States", -77.0, 38.9, Bloc.West, "NAMERICA", 1200, 1000, SuperRoster),
+        new("CAN", "Canada", -75.7, 45.4, Bloc.West, "NAMERICA", 400, 300, "IIAKCWPHT"),
+        new("GBR", "United Kingdom", -0.1, 51.5, Bloc.West, "BRITAIN", 500, 400, RegionalRoster),
+        new("FRA", "France", 2.35, 48.85, Bloc.West, "EURASIA", 500, 400, RegionalRoster),
+        new("FRG", "West Germany", 7.1, 50.7, Bloc.West, "EURASIA", 450, 380, RegionalRoster),
+        new("ITA", "Italy", 12.5, 41.9, Bloc.West, "EURASIA", 350, 300, "IIAKCWWPHTG"),
+        new("TUR", "Turkey", 32.85, 39.9, Bloc.West, "EURASIA", 300, 280, "IIAKKCWPPHTG"),
+        new("JPN", "Japan", 139.7, 35.7, Bloc.West, "JAPAN", 450, 300, "IIAKCWWPPHTG"),
+        new("KOR", "South Korea", 127.0, 37.55, Bloc.West, "EURASIA", 250, 260, "IIAKKCWPHTG"),
+        new("AUS", "Australia", 149.1, -35.3, Bloc.West, "OCEANIA", 300, 220, "IIAKCWPT"),
+        new("IND", "India", 77.2, 28.6, Bloc.NonAligned, "EURASIA", 600, 450, RegionalRoster),
+        new("EGY", "Egypt", 31.2, 30.0, Bloc.NonAligned, "AFRICA", 280, 250, "IIAKCWPT"),
+        new("YUG", "Yugoslavia", 20.5, 44.8, Bloc.NonAligned, "EURASIA", 250, 220, "IIAKCPT"),
+        new("BRA", "Brazil", -47.9, -15.8, Bloc.NonAligned, "SAMERICA", 400, 300, "IIAKCWPT"),
+        new("IRN", "Iran", 51.4, 35.7, Bloc.NonAligned, "EURASIA", 300, 250, "IIAKCPHT")
     };
 
     private static readonly Dictionary<string, (double Longitude, double Latitude)> Ports = new()
@@ -91,13 +97,18 @@ public static class DefaultScenario
     private static readonly Dictionary<UnitKind, int> KindSector = new()
     {
         [UnitKind.Infantry] = 0,
-        [UnitKind.Armor] = 1,
-        [UnitKind.Artillery] = 2,
-        [UnitKind.Air] = 3,
-        [UnitKind.SupplyConvoy] = 4
+        [UnitKind.Artillery] = 1,
+        [UnitKind.Tank] = 2,
+        [UnitKind.Armor] = 2,
+        [UnitKind.ArmoredCar] = 3,
+        [UnitKind.Warplane] = 4,
+        [UnitKind.Air] = 4,
+        [UnitKind.Helicopter] = 5,
+        [UnitKind.Truck] = 6,
+        [UnitKind.SupplyConvoy] = 6
     };
 
-    private const int SectorCount = 5;
+    private const int SectorCount = 7;
 
     private static Vector2 Place(double longitude, double latitude) =>
         new(
@@ -178,24 +189,18 @@ public static class DefaultScenario
         return 0.1;
     }
 
-    private static (double Speed, double Strength) Stats(UnitKind kind) => kind switch
-    {
-        UnitKind.Infantry => (0.04, 100),
-        UnitKind.Artillery => (0.03, 100),
-        UnitKind.Armor => (0.08, 100),
-        UnitKind.Naval => (0.12, 120),
-        UnitKind.Air => (0.4, 80),
-        _ => (0.06, 60)
-    };
-
     private static UnitKind? KindOf(char code) => code switch
     {
         'I' => UnitKind.Infantry,
         'A' => UnitKind.Artillery,
-        'T' => UnitKind.Armor,
-        'N' => UnitKind.Naval,
-        'F' => UnitKind.Air,
-        'S' => UnitKind.SupplyConvoy,
+        'K' => UnitKind.Tank,
+        'C' => UnitKind.ArmoredCar,
+        'W' => UnitKind.Warship,
+        'P' => UnitKind.Warplane,
+        'H' => UnitKind.Helicopter,
+        'T' => UnitKind.Truck,
+        'G' => UnitKind.CargoShip,
+        'L' => UnitKind.CargoPlane,
         _ => null
     };
 
@@ -241,6 +246,7 @@ public static class DefaultScenario
                 0f,
                 Math.Min(MaxScatter, NearestCapitalDistance(entry) * ScatterShare) - Vector2.Distance(anchor, capital));
             var occurrences = new Dictionary<UnitKind, int>();
+            var shipsAtPort = 0;
             for (var k = 0; k < entry.Units.Length; k++)
             {
                 var kind = KindOf(entry.Units[k]);
@@ -249,7 +255,9 @@ public static class DefaultScenario
                     continue;
                 }
                 Vector2 position;
-                if (kind == UnitKind.Naval)
+                occurrences.TryGetValue(kind.Value, out var occurrence);
+                occurrences[kind.Value] = occurrence + 1;
+                if (kind.Value.DomainOf() == Domain.Sea)
                 {
                     if (!Ports.TryGetValue(entry.Id, out var port))
                     {
@@ -260,12 +268,12 @@ public static class DefaultScenario
                     {
                         continue;
                     }
-                    position = berth.Value;
+                    var shipSlot = shipsAtPort++;
+                    var nudge = new Vector2(shipSlot * 2.2f, (shipSlot % 2 == 0 ? 1f : -1f) * 1.4f);
+                    position = Settle(territory, Domain.Sea, owner, berth.Value, nudge);
                 }
                 else
                 {
-                    occurrences.TryGetValue(kind.Value, out var occurrence);
-                    occurrences[kind.Value] = occurrence + 1;
                     position = Settle(
                         territory,
                         kind.Value.DomainOf(),
@@ -273,13 +281,12 @@ public static class DefaultScenario
                         anchor,
                         ScatterOffset(kind.Value, occurrence, maxRadius));
                 }
-                var (speed, strength) = Stats(kind.Value);
-                world.AddUnit(owner, kind.Value, position, speed, strength);
+                world.AddUnit(owner, kind.Value, position);
             }
         }
         var soviet = new CountryId(ModelId);
         var pacificBase = Place(131.9, 43.1);
-        world.AddUnit(soviet, UnitKind.Naval, SeaBerth(territory, soviet, pacificBase) ?? pacificBase, 0.12, 120);
+        world.AddUnit(soviet, UnitKind.Warship, SeaBerth(territory, soviet, pacificBase) ?? pacificBase);
 
         var sensors = new SensorNetwork(seed + 1000);
         sensors.Add(SensorProfiles.Radar(1, soviet, Place(37.6, 55.75)));

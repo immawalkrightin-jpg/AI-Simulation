@@ -1,4 +1,5 @@
 using Simulation.API.Contracts.GroundTruth;
+using WorldEngine.Countries;
 using WorldEngine.Interactions;
 using WorldEngine.Sensors;
 using WorldEngine.World;
@@ -55,7 +56,8 @@ public static class GroundTruthMapper
                     c.Supplies,
                     c.Ammunition,
                     c.Bloc.ToString(),
-                    state.ModelCountry == c.Id))
+                    state.ModelCountry == c.Id,
+                    Math.Round(NationalPower.Of(state, c.Id).Total, 1)))
                 .ToList(),
             state.Units
                 .Select(u => new UnitDto(

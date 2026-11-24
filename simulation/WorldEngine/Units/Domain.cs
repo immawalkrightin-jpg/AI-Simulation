@@ -9,10 +9,7 @@ public enum Domain
 
 public static class UnitKindExtensions
 {
-    public static Domain DomainOf(this UnitKind kind) => kind switch
-    {
-        UnitKind.Naval => Domain.Sea,
-        UnitKind.Air => Domain.Air,
-        _ => Domain.Land
-    };
+    public static Domain DomainOf(this UnitKind kind) => UnitCatalog.Of(kind).Domain;
+
+    public static UnitRole RoleOf(this UnitKind kind) => UnitCatalog.Of(kind).Role;
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { LEGEND, drawSymbol, symbolName } from "../js/units/symbols.js";
+import { LEGEND, drawSymbol, isAirborne, symbolName } from "../js/units/symbols.js";
 import { MANUAL_ROWS, groupRows, rowsPresent } from "../js/units/legend.js";
 import { carrierIsDefault, carrierOf, screenHeading, unitHeading } from "../js/maps/motion.js";
 
@@ -37,6 +37,42 @@ test("symbols: engine unit kinds map to distinct silhouettes", () => {
   const names = kinds.map(symbolName);
   assert.equal(new Set(names).size, kinds.length);
   assert.ok(!names.includes("Unknown"));
+});
+
+test("symbols: the milestone 15 unit kinds each get a distinct silhouette", () => {
+  const kinds = ["Infantry", "Artillery", "Tank", "ArmoredCar", "Warship", "Warplane", "Helicopter", "Truck", "CargoShip", "CargoPlane"];
+  const names = kinds.map(symbolName);
+  assert.ok(!names.includes("Unknown"));
+  assert.equal(new Set(names).size, kinds.length);
+});
+
+test("symbols: the legacy generic kinds share the shape of their specific successor", () => {
+  assert.equal(symbolName("Armor"), symbolName("Tank"));
+  assert.equal(symbolName("Naval"), symbolName("Warship"));
+  assert.equal(symbolName("Air"), symbolName("Warplane"));
+  assert.equal(symbolName("SupplyConvoy"), symbolName("Truck"));
+});
+
+test("symbols: aircraft and helicopters fly, everything else stays on the ground", () => {
+  for (const kind of ["Air", "Warplane", "CargoPlane", "Helicopter"]) {
+    assert.ok(isAirborne(kind), `${kind} should be airborne`);
+  }
+  for (const kind of ["Infantry", "Artillery", "Tank", "ArmoredCar", "Warship", "Truck", "CargoShip", "Zeppelin"]) {
+    assert.ok(!isAirborne(kind), `${kind} should not be airborne`);
+  }
+});
+
+test("manual: every unit kind the engine fields has a unit row, with carriers in their own group", () => {
+  const byId = new Map(MANUAL_ROWS.map((row) => [row.id, row]));
+  for (const kind of ["Infantry", "Artillery", "Tank", "ArmoredCar", "Warship", "Warplane", "Helicopter", "Truck", "CargoShip", "CargoPlane"]) {
+    assert.ok(byId.has(`unit:${symbolName(kind)}`), `unit:${symbolName(kind)} missing for ${kind}`);
+  }
+  for (const id of ["unit:Truck", "unit:CargoShip", "unit:Transport"]) {
+    assert.equal(byId.get(id).group, "Carriers");
+  }
+  for (const id of ["unit:Tank", "unit:ArmoredCar", "unit:Warship", "unit:Fighter", "unit:Helicopter"]) {
+    assert.equal(byId.get(id).group, "Units");
+  }
 });
 
 test("symbols: sensors, carriers and the command centre have their own silhouettes", () => {

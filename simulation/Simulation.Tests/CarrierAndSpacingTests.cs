@@ -58,7 +58,7 @@ public class CarrierAndSpacingTests
     {
         var state = DefaultScenario.Build(42).State;
         var countries = state.Countries.All;
-        foreach (var unit in state.Units.Where(u => u.Kind != UnitKind.Naval))
+        foreach (var unit in state.Units.Where(u => u.Kind.DomainOf() != Domain.Sea))
         {
             var home = countries.Single(c => c.Id == unit.Owner);
             var nearest = countries.Where(c => c.Id != home.Id).Min(c => Vector2.Distance(home.Capital, c.Capital));
@@ -73,7 +73,7 @@ public class CarrierAndSpacingTests
     {
         var state = DefaultScenario.Build(42).State;
         var countries = state.Countries.All;
-        foreach (var unit in state.Units.Where(u => u.Kind != UnitKind.Naval))
+        foreach (var unit in state.Units.Where(u => u.Kind.DomainOf() != Domain.Sea))
         {
             var own = countries.Single(c => c.Id == unit.Owner);
             var ownDistance = Vector2.Distance(unit.Position, own.Capital);

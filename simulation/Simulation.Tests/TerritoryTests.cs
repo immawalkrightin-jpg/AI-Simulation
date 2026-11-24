@@ -156,6 +156,14 @@ public class TerritoryTests
     [InlineData(UnitKind.SupplyConvoy, Domain.Land)]
     [InlineData(UnitKind.Naval, Domain.Sea)]
     [InlineData(UnitKind.Air, Domain.Air)]
+    [InlineData(UnitKind.Tank, Domain.Land)]
+    [InlineData(UnitKind.ArmoredCar, Domain.Land)]
+    [InlineData(UnitKind.Truck, Domain.Land)]
+    [InlineData(UnitKind.Warship, Domain.Sea)]
+    [InlineData(UnitKind.CargoShip, Domain.Sea)]
+    [InlineData(UnitKind.Warplane, Domain.Air)]
+    [InlineData(UnitKind.Helicopter, Domain.Air)]
+    [InlineData(UnitKind.CargoPlane, Domain.Air)]
     public void EveryUnitKindBelongsToOneDomain(UnitKind kind, Domain expected)
     {
         Assert.Equal(expected, kind.DomainOf());

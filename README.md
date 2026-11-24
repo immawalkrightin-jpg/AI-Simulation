@@ -43,14 +43,14 @@ python -m http.server 5500
 11. Feedback backend and importer
     - [x] Feedback store, controller and contracts
     - [x] Importer into the registry
-    - [ ] Run C# and Python tests
+    - [x] Run C# and Python tests
 12. Terminal UI
     - [x] Report parser, API link, report dialog and history
     - [ ] Manual check in the browser
 13. Ground-truth evaluator
     - [x] Scoring of the AI's tracks against real units
     - [x] Version evaluation over a list of seeds
-    - [ ] Run Python tests
+    - [x] Run Python tests
 14. Window A geography (in review)
     - [x] Territory raster built from coldwar.json
     - [x] Keep `DefaultScenario.Build(int seed)` signature
@@ -60,16 +60,18 @@ python -m http.server 5500
     - [x] Patrol and dispatch destinations validated against the raster
     - [x] Ports snap to the nearest sea cell
     - [x] Tests: legal start cells, long run keeps units legal
-    - [ ] Run `dotnet test`
-15. Unit roster and national power
-    - [ ] Tank, armored car, warship, warplane, helicopter
-    - [ ] Truck, cargo ship, cargo plane as carriers, separate from combat units
-    - [ ] Domain, speed, strength, range and role per kind
-    - [ ] Country power computed from fielded forces and stockpiles
-    - [ ] Cold War starting figures (superpowers, regional powers, small states)
-    - [ ] Power shown in the dossier
-    - [ ] Frontend symbols, manual and legend rows for the new kinds
-    - [ ] Tests: power order, one domain per kind, legal start cells
+    - [x] Run `dotnet test` (104 passed)
+15. Unit roster and national power (in review)
+    - [x] Tank, armored car, warship, warplane, helicopter
+    - [x] Truck, cargo ship, cargo plane as carriers, separate from combat units
+    - [x] Domain, speed, strength, range and role per kind
+    - [x] Country power computed from fielded forces and stockpiles
+    - [x] Cold War starting figures (superpowers, regional powers, small states)
+    - [x] Power shown in the dossier
+    - [x] Frontend symbols, manual and legend rows for the new kinds
+    - [x] Tests: power order, one domain per kind, legal start cells
+    - [ ] Run `dotnet test` and `npm test` on the owner's machine
+    - [ ] Manual check in the browser (new silhouette, dossier power section)
 16. Logistics routing, hand-offs and route rendering
     - [ ] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
     - [ ] Sea lane graph with chokepoints (Danish straits, GIUK, Bosporus, Gibraltar, Suez, Malacca, Panama, Cape)

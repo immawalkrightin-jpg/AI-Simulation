@@ -8,7 +8,8 @@ public sealed record CountryDto(
     double Supplies,
     double Ammunition,
     string Bloc,
-    bool IsModel);
+    bool IsModel,
+    double Power = 0);
 
 public sealed record UnitDto(
     int Id,

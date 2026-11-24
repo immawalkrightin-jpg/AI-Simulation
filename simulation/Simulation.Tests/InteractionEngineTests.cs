@@ -32,8 +32,8 @@ public class InteractionEngineTests
         var kinds = simulation.State.Log.Records.Select(r => r.Kind).ToHashSet();
         Assert.Contains("negotiation_started", kinds);
         Assert.Contains("supply_dispatched", kinds);
-        Assert.True(kinds.Any(k => k == "negotiation_concluded" || k == "negotiation_cancelled"));
-        Assert.True(kinds.Any(k => k == "supply_delivered" || k == "supply_intercepted"));
+        Assert.Contains(kinds, k => k == "negotiation_concluded" || k == "negotiation_cancelled");
+        Assert.Contains(kinds, k => k == "supply_delivered" || k == "supply_intercepted");
     }
 
     [Fact]
