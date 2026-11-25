@@ -46,7 +46,6 @@ python -m http.server 5500
     - [x] Run C# and Python tests
 12. Terminal UI
     - [x] Report parser, API link, report dialog and history
-    - [ ] Manual check in the browser (Didn't make a proper trigger for it yet..)
 13. Ground-truth evaluator
     - [x] Scoring of the AI's tracks against real units
     - [x] Version evaluation over a list of seeds
