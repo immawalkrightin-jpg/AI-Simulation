@@ -61,7 +61,7 @@ Bloc is shown by pattern, never by colour: East = fine diagonal hatch, West = do
 - **Shape is what it is.** Every unit, sensor, carrier and installation has its own silhouette in `symbols.js`. Colour never carries a meaning that shape already carries.
 - **Fixed pixel size**, not perspective-scaled: 9 px radius in country view, 6 px at world level, stroke 1.5 px, a dark backing disc under each symbol.
 - **Orientation.** Units head along the vector to their destination, otherwise their last movement. Shipments follow the arc tangent. Top-view shapes (Fighter, Transport, Helicopter, Missile) rotate; side-view shapes mirror.
-- **State is on the symbol.** Destroyed: broken outline and a red cross. Moving: a heading tick and a short trail. Strength: an outlined bar at least as wide as the symbol, with a tick when low.
+- **State is on the symbol.** Destroyed: broken outline and a red cross. In ambush: a dotted outline (sensors see it far less often). Moving: a heading tick and a short trail. Strength: an outlined bar at least as wide as the symbol, with a tick when low. Dashes on a symbol outline go through the `dash` argument of `drawSymbol` (pixels), never through `ctx.setLineDash` before the call, because `drawSymbol` scales the context.
 - **No ids by default.** Labels appear on hover or selection, with a halo.
 - **Declutter.** Symbols within 18 px cluster into a count badge. A click spreads the members on a ring with leader lines to their true positions (display offsets are visual only). Country labels are placed greedily in priority order (selected, hero, capitals) and fade with hysteresis.
 
@@ -74,7 +74,7 @@ Bloc is shown by pattern, never by colour: East = fine diagonal hatch, West = do
 - **Symbol manual** (`?` button or `L`): grouped into Units, Carriers, Sensors and installations, Lines, Markers, Colour roles. Every row is drawn with the same `drawSymbol` and marker calls the map uses (`MANUAL_ROWS` in `legend.js`), so it cannot drift from the map.
 - **In this view** (bottom right, country view only): only the symbol types currently on screen.
 - **Tooltips** on hover for every symbol: kind, owner, id, status, strength; for shipments carrier, mode, cargo, route and status.
-- **Dossier**: name and bloc, labelled Supplies and Ammunition bars (relative to the peak seen since load), units grouped by kind with counts and status, active operations, most hostile and closest relations, back button.
+- **Dossier**: name and bloc, labelled Supplies and Ammunition bars (relative to the peak seen since load), units grouped by kind with counts and status (active, moving, in ambush, destroyed), active operations, fronts, paralyzed ground and occupied ground (each only when there is some), most hostile and closest relations, back button.
 - **HUD** (always visible): link state, tick, clock, running or paused, Pause, Step 1, Step 10, speed (`POST /api/simulation/speed?value=`). The event log is a collapsible strip showing the last three events.
 
 ## Performance
@@ -110,6 +110,18 @@ Standing relations are faint and ongoing operations are bright.
 | Expanding red ring with bracket | Missile impact |
 
 Finished operations fade over eight ticks.
+
+## Frontline overlays
+
+Drawn flat on the ground between the land and the operations, from `snapshot.zones` and `snapshot.occupations`. They follow the same focus rules as operations: in country view only those touching the focused country are drawn.
+
+| Overlay | Meaning |
+|---|---|
+| Red dashed ring with a cross, red fill | Paralyzed ground. The fill and outline fade as repairs go on. Labelled with its severity in country view or on hover. The owner's units inside are stuck while it is strong |
+| White dashed ring with a bracket, faint white fill | Occupied ground: land one country holds inside another after a decisive clash. Labelled with the holder |
+| Unit with a dotted outline | A unit in ambush |
+
+Both areas are hoverable at their centre (tooltip: owner or holder, severity or loser, time to repair or since which tick, cause) and listed in the dossier of the countries involved. Clicking them does nothing. Events `ambush_sprung`, `territory_seized`, `zone_paralyzed` and `secondary_explosion` are marked as hostile in the event strip.
 
 ## Running
 

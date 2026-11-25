@@ -1,5 +1,6 @@
 using WorldEngine.Interactions;
 using WorldEngine.Sensors;
+using WorldEngine.Units;
 
 namespace WorldEngine.World;
 
@@ -33,6 +34,10 @@ public sealed class WorldSimulation
         }
         foreach (var unit in State.Units)
         {
+            if (unit.Status == UnitStatus.Moving && State.Zones.Blocks(unit.Owner, unit.Position, State.Clock.Tick))
+            {
+                unit.Halt();
+            }
             unit.Step(State.Clock.TickSeconds);
         }
         Sensors?.Sense(State);

@@ -20,6 +20,7 @@ const BLOC_LABELS = { East: "East bloc", West: "West bloc", NonAligned: "Non-ali
 const OPERATION_LABELS = { Negotiation: "Negotiation", SupplyShipment: "Supply shipment", Clash: "Clash", MissileStrike: "Missile strike" };
 const RUNG_LABELS = { Calm: "Calm", Tension: "Tension", Incident: "Incident", Clash: "Clash", Missile: "Missile" };
 const RUNG_ORDER = ["Calm", "Tension", "Incident", "Clash", "Missile"];
+const STATUS_LABELS = { Ambushing: "In ambush" };
 
 export const LOW_SHARE = 0.3;
 
@@ -28,6 +29,33 @@ export const carrierLabel = (carrier) => CARRIER_LABELS[carrier] || carrier;
 export const blocLabel = (bloc) => BLOC_LABELS[bloc] || bloc;
 export const operationLabel = (kind) => OPERATION_LABELS[kind] || kind;
 export const rungLabel = (rung) => RUNG_LABELS[rung] || rung;
+
+export const statusLabel = (status) => STATUS_LABELS[status] || status;
+
+export function zonesFor(snapshot, id) {
+  return (snapshot.zones || [])
+    .filter((z) => z.owner === id)
+    .map((z) => ({
+      id: z.id,
+      severity: Math.round(Math.min(1, Math.max(0, z.severity)) * 100),
+      repairIn: Math.max(0, z.repairTick - snapshot.tick),
+      cause: z.cause
+    }))
+    .sort((a, b) => b.severity - a.severity || a.id - b.id);
+}
+
+export function occupationsFor(snapshot, id) {
+  return (snapshot.occupations || [])
+    .filter((o) => o.holder === id || o.loser === id)
+    .map((o) => ({
+      id: o.id,
+      holds: o.holder === id,
+      other: o.holder === id ? o.loser : o.holder,
+      since: o.startTick,
+      cause: o.cause
+    }))
+    .sort((a, b) => Number(b.holds) - Number(a.holds) || a.id - b.id);
+}
 
 export function frontsFor(snapshot, id) {
   return (snapshot.fronts || [])
@@ -82,7 +110,7 @@ export function tooltipFor(snapshot, hit) {
       title: `${kindLabel(unit.kind)} ${unit.owner}-${unit.id}`,
       rows: [
         ["Owner", unit.owner],
-        ["Status", unit.status],
+        ["Status", statusLabel(unit.status)],
         ["Strength", `${Math.round(unit.strength)}${hit.max ? ` (${percent(unit.strength, hit.max)})` : ""}`]
       ]
     };
@@ -117,6 +145,36 @@ export function tooltipFor(snapshot, hit) {
         ["Status", item.status],
         ...(item.cause ? [["Cause", item.cause]] : []),
         ...(item.hunter ? [["Hunted by", item.hunter]] : [])
+      ]
+    };
+  }
+  if (hit.type === "zone") {
+    const zone = (snapshot.zones || []).find((z) => z.id === hit.id);
+    if (!zone) {
+      return null;
+    }
+    return {
+      title: "Paralyzed ground",
+      rows: [
+        ["Owner", zone.owner],
+        ["Severity", `${Math.round(Math.min(1, Math.max(0, zone.severity)) * 100)}%`],
+        ["Repaired in", `${Math.max(0, zone.repairTick - snapshot.tick)} ticks`],
+        ["Cause", zone.cause]
+      ]
+    };
+  }
+  if (hit.type === "occupation") {
+    const held = (snapshot.occupations || []).find((o) => o.id === hit.id);
+    if (!held) {
+      return null;
+    }
+    return {
+      title: "Occupied ground",
+      rows: [
+        ["Held by", held.holder],
+        ["Taken from", held.loser],
+        ["Since tick", String(held.startTick)],
+        ["Cause", held.cause]
       ]
     };
   }
@@ -171,7 +229,7 @@ export function dossierFor(snapshot, id, peaks) {
   const groups = new Map();
   for (const unit of own) {
     const label = kindLabel(unit.kind);
-    const entry = groups.get(label) || { label, total: 0, active: 0, moving: 0, destroyed: 0 };
+    const entry = groups.get(label) || { label, total: 0, active: 0, moving: 0, hidden: 0, destroyed: 0 };
     entry.total++;
     if (unit.status === "Destroyed") {
       entry.destroyed++;
@@ -179,6 +237,8 @@ export function dossierFor(snapshot, id, peaks) {
       entry.active++;
       if (unit.status === "Moving") {
         entry.moving++;
+      } else if (unit.status === "Ambushing") {
+        entry.hidden++;
       }
     }
     groups.set(label, entry);
@@ -212,6 +272,8 @@ export function dossierFor(snapshot, id, peaks) {
     units: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)),
     operations,
     fronts: frontsFor(snapshot, id),
+    zones: zonesFor(snapshot, id),
+    occupations: occupationsFor(snapshot, id),
     hostile: relations.slice(0, 3).filter((r) => r.value < 0),
     closest: relations.slice(-3).reverse().filter((r) => r.value > 0)
   };

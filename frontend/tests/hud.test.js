@@ -23,6 +23,15 @@ test("event strip: only hostile kinds are marked", () => {
   assert.equal(isHostileEvent({ kind: "RelationShift" }), false);
 });
 
+test("event strip: frontline violence is marked, quiet frontline events are not", () => {
+  for (const kind of ["ambush_sprung", "territory_seized", "zone_paralyzed", "secondary_explosion"]) {
+    assert.equal(isHostileEvent({ kind }), true, kind);
+  }
+  for (const kind of ["ambush_set", "ground_returned", "zone_repaired", "front_cooled", "supply_delivered"]) {
+    assert.equal(isHostileEvent({ kind }), false, kind);
+  }
+});
+
 test("clock text", () => {
   assert.equal(clockText(12.4), "12 s");
 });

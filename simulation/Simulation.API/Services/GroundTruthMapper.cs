@@ -160,6 +160,17 @@ public static class GroundTruthMapper
                     z.StartTick,
                     z.RepairTick,
                     z.Cause))
+                .ToList(),
+            state.Occupations.All
+                .Select(o => new OccupationDto(
+                    o.Id,
+                    o.Holder.Value,
+                    o.Loser.Value,
+                    o.Center.X,
+                    o.Center.Y,
+                    o.Radius,
+                    o.StartTick,
+                    o.Cause))
                 .ToList());
     }
 }

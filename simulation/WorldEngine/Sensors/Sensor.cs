@@ -64,6 +64,10 @@ public sealed class Sensor
             }
             var ratio = distance / Range;
             var probability = BaseDetection * (1 - ratio * ratio);
+            if (unit.Status == UnitStatus.Ambushing)
+            {
+                probability *= AmbushRules.Concealment;
+            }
             if (rng.NextDouble() >= probability)
             {
                 continue;

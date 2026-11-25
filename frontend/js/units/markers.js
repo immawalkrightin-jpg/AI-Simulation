@@ -18,7 +18,10 @@ export const DASH = {
   Sensor: [4, 6],
   Destination: [3, 5],
   Broken: [3, 3],
-  Foreign: [3, 3]
+  Foreign: [3, 3],
+  Hidden: [2, 2],
+  Zone: [6, 4],
+  Held: [9, 3]
 };
 
 // Flat markers: diamond, hollow, cross, bracket, handoff, dot. The caller sets the dash.

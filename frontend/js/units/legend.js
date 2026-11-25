@@ -224,6 +224,51 @@ const MARKERS = [
     }
   },
   {
+    id: "marker:ambush",
+    label: "Unit in ambush",
+    meaning: "A land unit lying in wait inside its border. Dotted outline. Sensors see it far less often.",
+    draw(ctx, w, h) {
+      backing(ctx, w / 2, h / 2, 7);
+      ctx.strokeStyle = rgba(INK_RGB, 0.75);
+      ctx.lineWidth = 1.5;
+      drawSymbol(ctx, "Tank", w / 2, h / 2, 7, 0, null, DASH.Hidden);
+    }
+  },
+  {
+    id: "area:zone",
+    label: "Paralyzed ground",
+    meaning: "Land put out of use by a strike. Red dashed ring and cross. The fill fades as repairs go on, and the owner's units there are stuck while it is strong.",
+    draw(ctx, w, h) {
+      ctx.fillStyle = rgba(RED_RGB, 0.22);
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.setLineDash(DASH.Zone);
+      ctx.strokeStyle = rgba(RED_RGB, 0.85);
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      glyph(ctx, "cross", w / 2, h / 2, 4, RED_RGB, 0.9);
+    }
+  },
+  {
+    id: "area:occupation",
+    label: "Occupied ground",
+    meaning: "Land one country holds inside another after a decisive clash. White dashed ring with a bracket, labelled with the holder.",
+    draw(ctx, w, h) {
+      ctx.fillStyle = rgba(INK_RGB, 0.1);
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.setLineDash(DASH.Held);
+      ctx.strokeStyle = rgba(INK_RGB, 0.85);
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      glyph(ctx, "bracket", w / 2, h / 2, 5, INK_RGB, 0.85);
+    }
+  },
+  {
     id: "marker:strength",
     label: "Strength bar",
     meaning: "Outlined bar under a unit: its strength against its own peak.",
@@ -244,11 +289,9 @@ const MARKERS = [
     label: "Destroyed unit",
     meaning: "Broken outline with a red cross.",
     draw(ctx, w, h) {
-      ctx.setLineDash(DASH.Broken);
       ctx.strokeStyle = rgba(MID_RGB, 0.8);
       ctx.lineWidth = 1.5;
-      drawSymbol(ctx, "Tank", w / 2, h / 2, 9);
-      ctx.setLineDash([]);
+      drawSymbol(ctx, "Tank", w / 2, h / 2, 9, 0, null, DASH.Broken);
       glyph(ctx, "cross", w / 2, h / 2, 7, RED_RGB, 0.9);
     }
   },

@@ -49,6 +49,45 @@ public sealed class Unit
         }
     }
 
+    // Takes cover where it stands. Only a unit that is standing idle can lie in wait.
+    public void Conceal()
+    {
+        if (Status == UnitStatus.Idle)
+        {
+            Status = UnitStatus.Ambushing;
+        }
+    }
+
+    public void Reveal()
+    {
+        if (Status == UnitStatus.Ambushing)
+        {
+            Status = UnitStatus.Idle;
+        }
+    }
+
+    // Stops a moving unit where it is.
+    public void Halt()
+    {
+        if (Status == UnitStatus.Moving)
+        {
+            Destination = null;
+            Status = UnitStatus.Idle;
+        }
+    }
+
+    // Puts a unit at a point at once. Used when ground is handed back and its garrison pulls out.
+    public void Relocate(Vector2 point)
+    {
+        if (Status == UnitStatus.Destroyed)
+        {
+            return;
+        }
+        Position = point;
+        Destination = null;
+        Status = UnitStatus.Idle;
+    }
+
     public void Step(double seconds)
     {
         if (Status != UnitStatus.Moving || Destination is null)

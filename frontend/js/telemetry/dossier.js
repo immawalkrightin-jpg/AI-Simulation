@@ -40,11 +40,31 @@ function unitLine(group) {
   if (group.moving > 0) {
     parts.push(`${group.moving} moving`);
   }
+  if (group.hidden > 0) {
+    parts.push(`${group.hidden} in ambush`);
+  }
   if (group.destroyed > 0) {
     parts.push(`${group.destroyed} destroyed`);
   }
   const line = el("li");
   line.append(el("span", "", group.label), el("b", "", String(group.total)), el("small", "", parts.join(", ")));
+  return line;
+}
+
+const capital = (text) => (text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text);
+
+function zoneLine(zone) {
+  const line = el("li", "hostile");
+  line.append(el("span", "", capital(zone.cause)), el("b", "", `${zone.severity}%`), el("small", "", `repaired in ${zone.repairIn} ticks`));
+  return line;
+}
+
+function occupationLine(item) {
+  const line = el("li", item.holds ? "" : "hostile");
+  line.append(
+    el("span", "", item.holds ? `Holds ground of ${item.other}` : `Ground held by ${item.other}`),
+    el("small", "", `since tick ${item.since}, ${item.cause}`)
+  );
   return line;
 }
 
@@ -115,6 +135,8 @@ export class Dossier {
       section("Units", list(data.units.map(unitLine), "No units")),
       section("Active operations", list(data.operations.map(operationLine), "None active")),
       ...(data.fronts.length > 0 ? [section("Fronts", list(data.fronts.map(frontLine), "None"))] : []),
+      ...(data.zones.length > 0 ? [section("Paralyzed ground", list(data.zones.map(zoneLine), "None"))] : []),
+      ...(data.occupations.length > 0 ? [section("Occupied ground", list(data.occupations.map(occupationLine), "None"))] : []),
       section("Relations", list([...data.hostile.map((r) => relationLine({ ...r, other: `${r.other} (hostile)` })), ...data.closest.map((r) => relationLine({ ...r, other: `${r.other} (closest)` }))], "No notable relations")),
       back
     );

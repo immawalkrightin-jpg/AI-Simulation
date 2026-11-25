@@ -20,6 +20,14 @@ dotnet run --project Simulation.API
 
 The API listens on `http://localhost:5080`. See `documentation/architecture.md` for channels and access keys.
 
+Tests:
+
+```
+cd simulation && dotnet test
+cd frontend && node --test
+python -m pytest ml/tests
+```
+
 Generate the world map once (needs `pip install shapely` and network access), then serve the frontend:
 
 ```
@@ -101,15 +109,16 @@ python -m http.server 5500
     - [x] Tests: doctrine rules, ladder, hunting, waters, determinism, long run
     - [x] Run `dotnet test` and `npm test`
     - [x] Manual check in the browser (Fronts section, Cause and Hunted by rows)
-18. Ambush, conquest, paralyzed zones and secondary explosions (in progress)
-    - [ ] Ambush units that wait on routes and chokepoints
-    - [ ] Territory changes owner after a decisive clash
+18. Ambush, conquest, paralyzed zones and secondary explosions (in review)
+    - [x] Ambush units: land combat units take cover just inside their border on a hot front, hidden from sensors, and spring on hostile land units and on convoys driving past
+    - [x] Ground changes hands after a decisive clash (an overlay on the raster, garrisoned, cutting the loser's income, handed back when the front cools)
     - [x] Paralyzed zones created by a missile strike, healing over time, with a reduced supply income and no shipping while badly hit
     - [x] Secondary explosion when a stockpile is hit
-    - [x] Paralyzed zones in the snapshot (`Zones`)
-    - [ ] Frontend overlays for conquered land and paralyzed zones
-    - [x] Tests so far: zone severity and repair, creation, shipping block, secondary blasts, bare worlds unchanged
-    - [ ] Tests: ownership change, ambush, determinism
+    - [x] `Zones` and `Occupations` in the snapshot
+    - [x] Frontend overlays for occupied ground and paralyzed zones (map, tooltip, legend rows, dossier sections)
+    - [x] Frontend: units in ambush show a dotted outline and a count in the dossier; frontline events read as hostile in the event strip
+    - [x] Tests: zone severity and repair, creation, shipping block, secondary blasts, ownership change, garrison, hand-back, ambush, determinism, snapshot mapping, bare worlds unchanged
+    - [x] Run `dotnet test` and `npm test` and look at the map in the browser (3 failed in .net, none in node)
 19. Randomized worlds and Window A verification
     - [ ] Seeded variation of powers, stockpiles, relations and positions inside Cold War limits
     - [ ] Default seed keeps the historical set-up

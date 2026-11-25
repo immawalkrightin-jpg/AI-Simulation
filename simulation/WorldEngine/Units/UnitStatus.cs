@@ -4,5 +4,6 @@ public enum UnitStatus
 {
     Idle,
     Moving,
-    Destroyed
+    Destroyed,
+    Ambushing
 }

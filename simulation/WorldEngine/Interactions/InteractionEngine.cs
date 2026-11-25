@@ -7,7 +7,7 @@ using WorldEngine.World;
 
 namespace WorldEngine.Interactions;
 
-public sealed class InteractionEngine
+public sealed partial class InteractionEngine
 {
     public const int FadeTicks = 8;
     public const double GauntletChance = 0.35;
@@ -43,6 +43,8 @@ public sealed class InteractionEngine
         {
             world.Escalation ??= new EscalationLadder(doctrine);
             Hunt(world, tick);
+            Ambush(world, tick);
+            AdvanceGarrisons(world);
         }
         foreach (var due in world.Interactions.Active.Where(i => i.ResolveTick <= tick).ToList())
         {
@@ -57,8 +59,9 @@ public sealed class InteractionEngine
             foreach (var country in world.Countries.All)
             {
                 var factor = 1.0 - 0.75 * world.Zones.Severity(country.Id, tick);
+                factor = Math.Max(0.1, factor - OccupationIncomeLoss * world.Occupations.All.Count(o => o.Loser == country.Id));
                 country.AddSupplies(8 * factor);
-                country.AddAmmunition(3);
+                country.AddAmmunition(3 * factor);
             }
         }
         foreach (var repaired in world.Zones.TakeRepaired(tick))
@@ -70,6 +73,14 @@ public sealed class InteractionEngine
             foreach (var move in ladder.Step(world))
             {
                 ApplyMove(world, move, "no new incidents for a long while");
+                if (move.To < move.From && move.To <= Rung.Tension)
+                {
+                    ReturnGround(
+                        world,
+                        world.Countries.Get(move.State.Front.First),
+                        world.Countries.Get(move.State.Front.Second),
+                        tick);
+                }
             }
         }
         Spawn(world, tick);
@@ -739,12 +750,13 @@ public sealed class InteractionEngine
                     succeeded
                         ? $"{a.Name} and {b.Name} concluded talks: {interaction.Subject}"
                         : $"talks between {a.Name} and {b.Name} collapsed: {interaction.Subject}");
-                if (succeeded
-                    && world.Escalation is { } ladder
-                    && interaction.Subject.StartsWith("ceasefire", StringComparison.Ordinal)
-                    && ladder.Cool(a.Id, b.Id, tick) is { } move)
+                if (succeeded && interaction.Subject.StartsWith("ceasefire", StringComparison.Ordinal))
                 {
-                    ApplyMove(world, move, "ceasefire talks succeeded");
+                    if (world.Escalation is { } ladder && ladder.Cool(a.Id, b.Id, tick) is { } move)
+                    {
+                        ApplyMove(world, move, "ceasefire talks succeeded");
+                    }
+                    ReturnGround(world, a, b, tick);
                 }
                 break;
             case InteractionKind.SupplyShipment:
@@ -776,6 +788,7 @@ public sealed class InteractionEngine
                 b.AddAmmunition(-(10 + rng.NextDouble() * 15));
                 world.Relations.Adjust(a.Id, b.Id, -0.08);
                 Log(world, "clash_ended", $"engagement between {a.Name} and {b.Name} ended with losses on both sides");
+                Conquer(world, a, b, tick);
                 break;
             case InteractionKind.MissileStrike:
                 if (succeeded)

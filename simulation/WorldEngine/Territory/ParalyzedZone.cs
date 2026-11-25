@@ -50,6 +50,9 @@ public sealed class ParalyzedZone
 
 public sealed class ZoneBook
 {
+    // A zone this bad keeps the owner's units and depots idle. Below it the owner is only slowed.
+    public const double BlockSeverity = 0.5;
+
     private readonly List<ParalyzedZone> items = new();
     private int nextId = 1;
 
@@ -86,6 +89,19 @@ public sealed class ZoneBook
 
     public bool Covers(Vector2 point, long tick) =>
         items.Any(z => tick < z.RepairTick && z.Contains(point));
+
+    // True when a live zone of this owner covers the point and is still bad enough to stop its units.
+    public bool Blocks(CountryId owner, Vector2 point, long tick)
+    {
+        foreach (var zone in items)
+        {
+            if (zone.Owner == owner && zone.Contains(point) && zone.SeverityAt(tick) >= BlockSeverity)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // Removes and returns the zones that are fully repaired by this tick.
     public IReadOnlyList<ParalyzedZone> TakeRepaired(long tick)

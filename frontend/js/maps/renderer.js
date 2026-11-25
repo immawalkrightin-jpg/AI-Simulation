@@ -388,6 +388,8 @@ export class MapRenderer {
       this.drawLand(now);
     }
     this.drawRelations(P);
+    this.drawOccupations(P);
+    this.drawZones(P);
     this.drawInteractions(P, now);
     if (this.interiorAlpha > 0.01 && this.interiorFocus) {
       this.drawSensors(P);
@@ -849,6 +851,63 @@ export class MapRenderer {
     this.ctx.lineWidth = 1;
   }
 
+  drawOccupations(P) {
+    const ctx = this.ctx;
+    for (const held of this.snapshot.occupations || []) {
+      if (!this.touchesFocus(held.holder, held.loser)) {
+        continue;
+      }
+      const hovered = this.hover && this.hover.type === "occupation" && this.hover.id === held.id;
+      ctx.globalAlpha = Math.min(this.dimOf(held.holder), this.dimOf(held.loser));
+      this.ring(P, held.x, held.y, held.radius, 0);
+      ctx.fillStyle = rgba(INK_RGB, hovered ? 0.16 : 0.09);
+      ctx.fill();
+      ctx.setLineDash(DASH.Held);
+      ctx.strokeStyle = rgba(INK_RGB, hovered ? 1 : 0.85);
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const c = P(held.x, held.y, 0);
+      glyph(ctx, "bracket", c.x, c.y, 5, INK_RGB, 0.8);
+      if (this.view.mode === "country" || hovered) {
+        this.text(`${held.holder} holds`, c.x + 9, c.y - 8, INK);
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 1;
+      this.present.add("area:occupation");
+      this.nextSlots.push({ type: "occupation", id: held.id, x: c.x, y: c.y, r: 6 });
+    }
+  }
+
+  drawZones(P) {
+    const ctx = this.ctx;
+    for (const zone of this.snapshot.zones || []) {
+      if (!this.touchesFocus(zone.owner)) {
+        continue;
+      }
+      const strength = Math.min(1, Math.max(0, zone.severity));
+      const hovered = this.hover && this.hover.type === "zone" && this.hover.id === zone.id;
+      ctx.globalAlpha = this.dimOf(zone.owner);
+      this.ring(P, zone.x, zone.y, zone.radius, 0);
+      ctx.fillStyle = rgba(RED_RGB, 0.08 + 0.2 * strength);
+      ctx.fill();
+      ctx.setLineDash(DASH.Zone);
+      ctx.strokeStyle = rgba(RED_RGB, 0.45 + 0.4 * strength);
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const c = P(zone.x, zone.y, 0);
+      glyph(ctx, "cross", c.x, c.y, 4, RED_RGB, 0.5 + 0.4 * strength);
+      if (this.view.mode === "country" || hovered) {
+        this.text(`Paralyzed ${Math.round(strength * 100)}%`, c.x + 9, c.y - 8, rgba(RED_RGB, 0.95));
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 1;
+      this.present.add("area:zone");
+      this.nextSlots.push({ type: "zone", id: zone.id, x: c.x, y: c.y, r: 6 });
+    }
+  }
+
   drawNegotiation(P, view) {
     const ctx = this.ctx;
     const { a, b, item, progress, finished, fade } = view;
@@ -1194,21 +1253,23 @@ export class MapRenderer {
     ctx.globalAlpha = item.alpha;
     backing(ctx, x, y, r);
     if (item.destroyed) {
-      ctx.setLineDash(DASH.Broken);
       ctx.strokeStyle = rgba(MID_RGB, 0.8);
       ctx.lineWidth = 1.5;
-      drawSymbol(ctx, unit.kind, x, y, r);
-      ctx.setLineDash([]);
+      drawSymbol(ctx, unit.kind, x, y, r, 0, null, DASH.Broken);
       glyph(ctx, "cross", x, y, r * 0.85, RED_RGB, 0.9);
       this.present.add("marker:destroyed");
       ctx.globalAlpha = 1;
       return;
     }
     const heading = unitHeading(P, entry.x, entry.y, unit, entry.facing);
-    ctx.strokeStyle = INK;
+    const hidden = unit.status === "Ambushing";
+    ctx.strokeStyle = hidden ? rgba(INK_RGB, 0.75) : INK;
     ctx.lineWidth = 1.5;
-    drawSymbol(ctx, unit.kind, x, y, r, heading === null ? 0 : heading);
+    drawSymbol(ctx, unit.kind, x, y, r, heading === null ? 0 : heading, null, hidden ? DASH.Hidden : []);
     ctx.lineWidth = 1;
+    if (hidden) {
+      this.present.add("marker:ambush");
+    }
     if (unit.status === "Moving" && heading !== null) {
       headingTick(ctx, x, y, r, heading);
       this.present.add("marker:moving");
@@ -1631,7 +1692,7 @@ export class MapRenderer {
       this.toggleCluster(hit.id);
       return;
     }
-    if (hit && hit.type === "shipment") {
+    if (hit && (hit.type === "shipment" || hit.type === "zone" || hit.type === "occupation")) {
       return;
     }
     if (!hit) {

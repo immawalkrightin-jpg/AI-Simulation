@@ -89,6 +89,16 @@ public sealed record ZoneDto(
     long RepairTick,
     string Cause);
 
+public sealed record OccupationDto(
+    int Id,
+    string Holder,
+    string Loser,
+    float X,
+    float Y,
+    float Radius,
+    long StartTick,
+    string Cause);
+
 public sealed record GroundTruthSnapshot(
     long Tick,
     double ElapsedSeconds,
@@ -101,6 +111,7 @@ public sealed record GroundTruthSnapshot(
     IReadOnlyList<EventDto> Events,
     IReadOnlyList<InteractionDto> Interactions,
     IReadOnlyList<FrontDto>? Fronts = null,
-    IReadOnlyList<ZoneDto>? Zones = null);
+    IReadOnlyList<ZoneDto>? Zones = null,
+    IReadOnlyList<OccupationDto>? Occupations = null);
 
 public sealed record SimulationStatus(long Tick, bool Paused, int Seed = 0, double Speed = 1);

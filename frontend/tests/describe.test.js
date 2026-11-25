@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocLabel, carrierLabel, chainText, dossierFor, frontsFor, kindLabel, legText, percent, powerFor, rungLabel, routeText, tooltipFor } from "../js/telemetry/describe.js";
+import { blocLabel, carrierLabel, chainText, dossierFor, frontsFor, kindLabel, legText, occupationsFor, percent, powerFor, rungLabel, routeText, statusLabel, tooltipFor, zonesFor } from "../js/telemetry/describe.js";
 
 const snapshot = {
   countries: [
@@ -229,4 +229,97 @@ test("politics: the shipment tooltip adds the cause and the hunter only when the
   const plain = tooltipFor(snapshot, { type: "shipment", id: 5, carrier: "CargoShip" });
   assert.equal(plain.rows.some((r) => r[0] === "Cause" || r[0] === "Hunted by"), false);
   assert.equal(dossierFor(political, "USSR", new Map()).operations[0].detail, "Cargo ship 64, hunted by TUR");
+});
+
+const frontline = {
+  ...snapshot,
+  tick: 100,
+  units: [
+    ...snapshot.units,
+    { id: 10, owner: "USSR", kind: "Tank", status: "Ambushing", strength: 90 },
+    { id: 11, owner: "USSR", kind: "Tank", status: "Ambushing", strength: 90 }
+  ],
+  zones: [
+    { id: 1, owner: "POL", x: 10, y: 10, radius: 12, severity: 0.4, startTick: 40, repairTick: 160, cause: "missile strike" },
+    { id: 2, owner: "POL", x: 30, y: 10, radius: 15, severity: 0.9, startTick: 60, repairTick: 130, cause: "strike and secondary explosion" },
+    { id: 3, owner: "USA", x: 50, y: 10, radius: 12, severity: 1.4, startTick: 90, repairTick: 95, cause: "missile strike" }
+  ],
+  occupations: [
+    { id: 4, holder: "USSR", loser: "POL", x: 20, y: 20, radius: 12, startTick: 70, cause: "Soviet Union outmatched Poland in the fighting" },
+    { id: 5, holder: "USA", loser: "USSR", x: 80, y: 20, radius: 11, startTick: 20, cause: "United States outmatched Soviet Union in the fighting" }
+  ]
+};
+
+test("frontline: zones of a country come worst first, with severity in percent and time to repair", () => {
+  assert.deepEqual(zonesFor(frontline, "POL"), [
+    { id: 2, severity: 90, repairIn: 30, cause: "strike and secondary explosion" },
+    { id: 1, severity: 40, repairIn: 60, cause: "missile strike" }
+  ]);
+  assert.deepEqual(zonesFor(frontline, "USSR"), []);
+});
+
+test("frontline: severity is clamped and a zone past its repair tick reports zero ticks left", () => {
+  const [zone] = zonesFor(frontline, "USA");
+  assert.equal(zone.severity, 100);
+  assert.equal(zone.repairIn, 0);
+});
+
+test("frontline: occupations list what a country holds first, then what it has lost", () => {
+  assert.deepEqual(occupationsFor(frontline, "USSR").map((o) => [o.id, o.holds, o.other]), [
+    [4, true, "POL"],
+    [5, false, "USA"]
+  ]);
+  assert.deepEqual(occupationsFor(frontline, "POL").map((o) => [o.id, o.holds, o.other]), [[4, false, "USSR"]]);
+  assert.deepEqual(occupationsFor(frontline, "XXX"), []);
+});
+
+test("frontline: an engine without zones or occupations gives empty lists", () => {
+  assert.deepEqual(zonesFor(snapshot, "POL"), []);
+  assert.deepEqual(occupationsFor(snapshot, "POL"), []);
+  const dossier = dossierFor(snapshot, "POL", new Map());
+  assert.deepEqual(dossier.zones, []);
+  assert.deepEqual(dossier.occupations, []);
+});
+
+test("frontline: the dossier carries zones and occupations", () => {
+  const dossier = dossierFor(frontline, "POL", new Map());
+  assert.equal(dossier.zones.length, 2);
+  assert.equal(dossier.occupations.length, 1);
+  assert.equal(dossier.occupations[0].holds, false);
+});
+
+test("frontline: units in ambush are counted apart from the moving ones", () => {
+  const tanks = dossierFor(frontline, "USSR", new Map()).units.find((u) => u.label === "Tank");
+  assert.equal(tanks.total, 4);
+  assert.equal(tanks.active, 3);
+  assert.equal(tanks.moving, 1);
+  assert.equal(tanks.hidden, 2);
+  assert.equal(tanks.destroyed, 1);
+  const infantry = dossierFor(frontline, "USSR", new Map()).units.find((u) => u.label === "Infantry");
+  assert.equal(infantry.hidden, 0);
+});
+
+test("frontline: the zone and occupation tooltips", () => {
+  assert.deepEqual(tooltipFor(frontline, { type: "zone", id: 1 }), {
+    title: "Paralyzed ground",
+    rows: [["Owner", "POL"], ["Severity", "40%"], ["Repaired in", "60 ticks"], ["Cause", "missile strike"]]
+  });
+  assert.deepEqual(tooltipFor(frontline, { type: "occupation", id: 4 }), {
+    title: "Occupied ground",
+    rows: [
+      ["Held by", "USSR"],
+      ["Taken from", "POL"],
+      ["Since tick", "70"],
+      ["Cause", "Soviet Union outmatched Poland in the fighting"]
+    ]
+  });
+  assert.equal(tooltipFor(frontline, { type: "zone", id: 99 }), null);
+  assert.equal(tooltipFor(frontline, { type: "occupation", id: 99 }), null);
+  assert.equal(tooltipFor(snapshot, { type: "zone", id: 1 }), null);
+});
+
+test("frontline: a unit in ambush reads as such in its tooltip", () => {
+  const tip = tooltipFor(frontline, { type: "unit", id: 10, max: 100 });
+  assert.deepEqual(tip.rows[1], ["Status", "In ambush"]);
+  assert.equal(statusLabel("Moving"), "Moving");
 });

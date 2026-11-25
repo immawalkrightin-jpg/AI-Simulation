@@ -132,7 +132,8 @@ test("manual: every line type the map draws has a row", () => {
   for (const id of [
     "line:negotiation", "line:concluded", "line:supply-ground", "line:supply-naval", "line:supply-air",
     "line:lost", "line:clash", "line:missile", "line:hostile", "line:allied",
-    "marker:hero", "marker:capital", "marker:selection", "marker:cluster", "marker:foreign", "marker:destroyed", "marker:low", "marker:handoff"
+    "marker:hero", "marker:capital", "marker:selection", "marker:cluster", "marker:foreign", "marker:destroyed", "marker:low", "marker:handoff",
+    "marker:ambush", "area:zone", "area:occupation"
   ]) {
     assert.ok(ids.has(id), `${id} missing`);
   }

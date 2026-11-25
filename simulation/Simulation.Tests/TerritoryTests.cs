@@ -201,8 +201,13 @@ public class TerritoryTests
             simulation.Run(25);
             foreach (var unit in simulation.State.Units)
             {
+                var domain = unit.Kind.DomainOf();
+                var legal = simulation.State.Territory!.Permits(domain, unit.Owner, unit.Position)
+                    || (domain == Domain.Land
+                        && !simulation.State.Territory.IsSea(unit.Position)
+                        && simulation.State.Occupations.HolderAt(unit.Position) == unit.Owner);
                 Assert.True(
-                    simulation.State.Territory!.Permits(unit.Kind.DomainOf(), unit.Owner, unit.Position),
+                    legal,
                     $"tick {simulation.State.Clock.Tick}: {unit.Owner.Value} {unit.Kind} at {unit.Position}");
             }
         }

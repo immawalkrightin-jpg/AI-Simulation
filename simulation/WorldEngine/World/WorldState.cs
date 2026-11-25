@@ -27,13 +27,18 @@ public sealed class WorldState
     public Doctrine? Doctrine { get; set; }
     public EscalationLadder? Escalation { get; set; }
     public ZoneBook Zones { get; } = new();
+    public OccupationBook Occupations { get; } = new();
     public Random Rng { get; }
+
+    // A second stream for ambushes and conquest, so those never shift the draws of the main one.
+    public Random Chance { get; }
     public float Width { get; }
     public float Height { get; }
 
     public WorldState(int seed, float width, float height, double tickSeconds = 60)
     {
         Rng = new Random(seed);
+        Chance = new Random(seed ^ 0x5EED5EED);
         Width = width;
         Height = height;
         Clock = new SimClock(tickSeconds);
@@ -66,9 +71,39 @@ public sealed class WorldState
     public Vector2 RandomPoint() =>
         new((float)(Rng.NextDouble() * Width), (float)(Rng.NextDouble() * Height));
 
-    public bool CanMove(Unit unit, Vector2 destination) =>
-        Territory is null
-        || Territory.SegmentPermits(unit.Kind.DomainOf(), unit.Owner, unit.Position, destination);
+    // A unit lying in ambush holds its ground. A unit in a paralyzed patch of its own country cannot move.
+    // Land units never march onto ground an enemy holds, and a garrison stays inside the patch it holds.
+    public bool CanMove(Unit unit, Vector2 destination)
+    {
+        if (unit.Status == UnitStatus.Ambushing)
+        {
+            return false;
+        }
+        var tick = Clock.Tick;
+        if (Zones.Blocks(unit.Owner, unit.Position, tick) || Zones.Blocks(unit.Owner, destination, tick))
+        {
+            return false;
+        }
+        if (Territory is null)
+        {
+            return true;
+        }
+        var domain = unit.Kind.DomainOf();
+        if (domain == Domain.Land)
+        {
+            var here = Occupations.HolderAt(unit.Position);
+            var there = Occupations.HolderAt(destination);
+            if (there is { } holder && holder != unit.Owner)
+            {
+                return false;
+            }
+            if (here == unit.Owner)
+            {
+                return there == unit.Owner;
+            }
+        }
+        return Territory.SegmentPermits(domain, unit.Owner, unit.Position, destination);
+    }
 
     public bool TryOrderMove(Unit unit, Vector2 destination)
     {

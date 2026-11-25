@@ -92,6 +92,8 @@ public class ApiTests : IClassFixture<ApiFactory>
         Assert.True(snapshot.GetProperty("sensors").GetArrayLength() > 0);
         Assert.Equal(countries * (countries - 1) / 2, snapshot.GetProperty("relations").GetArrayLength());
         Assert.True(snapshot.TryGetProperty("interactions", out _));
+        Assert.Equal(JsonValueKind.Array, snapshot.GetProperty("zones").ValueKind);
+        Assert.Equal(JsonValueKind.Array, snapshot.GetProperty("occupations").ValueKind);
     }
 
     [Fact]

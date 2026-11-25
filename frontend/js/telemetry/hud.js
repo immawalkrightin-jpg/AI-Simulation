@@ -2,7 +2,7 @@ import { el, fixed } from "./dom.js";
 
 // Always-visible HUD (tick, clock, running or paused, speed) and the collapsible event strip.
 
-const HOSTILE = /clash|missile|intercepted|cancelled/i;
+const HOSTILE = /clash|missile|intercepted|cancelled|ambush_sprung|seized|paralyzed|explosion/i;
 export const COLLAPSED_EVENTS = 3;
 export const EXPANDED_EVENTS = 12;
 

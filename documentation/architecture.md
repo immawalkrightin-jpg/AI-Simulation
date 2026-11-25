@@ -42,3 +42,13 @@ Observations are drained from the sensor network once per tick, sequenced, kept 
 ## Routing
 
 `WorldEngine/Routing` plans supply shipments over the territory raster. `RouteNetwork` holds the ports (each snapped to a water cell beside its owner's land), a few shipping-only canal cuts and an A* planner for three media: sea (ships), land (trucks, with a surcharge on foreign land) and air (cargo planes and helicopters). Land of countries hostile to the sender or the receiver is never crossed. A naval shipment is a `ShipmentRoute` of legs: truck to the dock, cargo ship through the sea, then truck onward, or a helicopter when the capital has no land link to its port. `PlanBest` tries the preferred mode, then the others. Results are cached per (medium, start, goal, owners, hostile set). Worlds without a territory or a network (`WorldState.Routes` null) keep direct capital-to-capital shipments. The route is part of the ground-truth contract (`InteractionDto.Route`); the frontend only draws it.
+
+## Frontline state
+
+When a doctrine is present, three pieces of state sit on `WorldState` next to the interactions, and none of them edits the territory raster:
+
+- `Zones` (`ZoneBook`): paralyzed patches left by a missile that lands. Severity fades linearly to zero at the repair tick. At 0.5 or more the owner's units inside cannot move and its shipping stops; any live zone cuts its income.
+- `Occupations` (`OccupationBook`): patches of one country's land that a neighbour holds after winning a clash by a power margin. The raster still says who owns the land; the book says who holds it. Land units of other countries cannot enter held ground, the holder garrisons it, and it is handed back when the front cools or ceasefire talks succeed.
+- Units in ambush (`UnitStatus.Ambushing`): hidden land combat units waiting just inside their border on a hot front. Sensors read them with a fifth of the normal detection chance (`AmbushRules.Concealment`).
+
+Ambushes and conquest roll on `WorldState.Chance`, a second random stream, so they never move the draws of the main stream. Both snapshot lists (`Zones`, `Occupations`) are part of the ground-truth contract and are never sent on the observation channel; the AI sees a hidden unit only the way it sees any other, through its sensors.
