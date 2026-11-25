@@ -70,7 +70,7 @@ python -m http.server 5500
     - [x] Power shown in the dossier
     - [x] Frontend symbols, manual and legend rows for the new kinds
     - [x] Tests: power order, one domain per kind, legal start cells
-    - [ ] Run `dotnet test` and `npm test`
+    - [x] Run `dotnet test` and `npm test`
 16. Logistics routing, hand-offs and route rendering (in review)
     - [x] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
     - [x] Sea routes over the raster with shipping canal cuts (Turkish Straits, Suez, Red Sea, Panama)
@@ -83,7 +83,7 @@ python -m http.server 5500
     - [x] Carrier changes at each hand-off, hand-off symbol, legend rows
     - [x] Tooltip and dossier show current leg and chain
     - [x] Tests: routes, hand-offs, bare worlds still work
-    - [ ] Run `dotnet test` and `npm test`
+    - [x] Run `dotnet test` and `npm test`
     - [x] Manual check in the browser (route lines, hand-off rings, carrier change)
 17. Cold War political logic and hunting of shipments
     - [ ] Doctrine object supplied by the scenario
