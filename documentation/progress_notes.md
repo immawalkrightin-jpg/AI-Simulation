@@ -78,15 +78,33 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Tests: `RoutingTests.cs` (synthetic maps: truck, ship, truck; helicopter for an unlinked capital; hostile wall; no-port country; determinism; real map: ports beside land, four Soviet seas, ocean connectivity through the chokepoints, every planned route legal, running world, snapshot route and carrier parity, bare worlds). `CarrierAndSpacingTests` updated. Frontend: `route.test.js`, new cases in `describe.test.js` and `symbols.test.js`.
 - NOT verified here: nothing was compiled or run (no copy of the project was made, per the working rule). Run `dotnet test` and `npm test`, then look at a shipment in the browser. The ocean connectivity theory cases are the first thing to read if anything fails: they depend on the real raster.
 
+## Milestone 17: Cold War political logic and hunting of shipments (written; in review)
+- Doctrine (`Diplomacy/Doctrine.cs`): `AidTie` (patron to client, with a reason), `ProxyFront` (name, pair, start rung, ceiling rung, reason), `SummitTie`, and forbidden pairs. Supplied by the scenario through `WorldState.Doctrine`. `MayFight` is false for forbidden pairs and for pairs with no front.
+- Ladder (`Diplomacy/EscalationLadder.cs`): rungs Calm, Tension, Incident, Clash, Missile, checked every 5 ticks. A rung rises with probability 0.15 times hostility (zero at relation -0.2, full at -1.0) up to the front's ceiling. A rung falls after 60 quiet ticks or when ceasefire talks on that front succeed. Tension and incident nudge relations down, cooling nudges them up. `WorldState.Escalation` holds the state.
+- Engine (`InteractionEngine`), only when a doctrine is present:
+  - Clashes only on fronts at Clash or above, missiles only on fronts at Missile (ammunition 40 or more). Forbidden pairs never fight.
+  - Supply flows along aid ties (patron richer than client, relation above 0), or between same-bloc partners with relation above 0.4. Talks are summits (rare), ceasefire talks on hot fronts, aid agreements, or routine contact between non-hostile pairs.
+  - Planning avoids hostile land and hostile coastal waters. When no safe lane exists, aid shipments run the gauntlet with chance 0.35 through the peaceful route and say so in their cause.
+  - Hunting: each tick a shipment inside a hostile zone is tracked by that country (logged once, the interceptor is ordered toward it when the move is legal) and caught with chance 0.06 + 0.08 times hostility, only if the hunter still has a warship (ships), tank or armored car (trucks) or warplane or helicopter (aircraft). The shipment ends where it was caught, 40 percent of the cargo is seized and relations drop. No dice are rolled at dispatch any more.
+  - Every interaction and its log line carry a cause ("because ...").
+- Without a doctrine the engine takes the old code paths and draws the same random numbers, so bare worlds are unchanged.
+- `Routing/RouteNetwork.cs`: optional `waterReach`. Sea cells within reach of an owned coast belong to that country. `ZoneAt(point)` gives the country holding a point's land or waters, sea planning blocks hostile waters, `IsLegal` checks them. Default scenario reach is 4 units (two cells). Without a reach nothing changes.
+- Scenario: 24 aid ties, 6 fronts (Korean peninsula, Indochina, Sino-Indian border, inner German border and Caribbean capped at Incident, Suez), 2 summit pairs. The Soviet-American and Pact-NATO ban is passed into the doctrine as forbidden pairs.
+- Contract (additive): `InteractionDto.Cause` and `Hunter`, `GroundTruthSnapshot.Fronts` (`FrontDto`).
+- Frontend: shipment tooltip rows `Cause` and `Hunted by` (only when sent), dossier detail "hunted by", dossier Fronts section (`frontsFor`, `rungLabel`).
+- Tests: `DoctrineTests.cs` (lookups, ladder climb, ceiling, cooling, ceasefire, no front no war, forbidden pairs, causes, aid-only shipments, summits, bare worlds unchanged, hunting on a synthetic corridor, peaceful transit never intercepted, no interceptors no catch, waters, planning around hostile waters, default doctrine validity, long run on seeds 42 and 7). Frontend: `describe.test.js`.
+- NOT verified here: nothing was compiled or run (no copy of the project was made, per the working rule). Run `dotnet test` and `npm test`, then open a country in the browser. Watch these first if something fails: `ScenarioTests.LongRunProducesEveryKindOfInteraction` (needs a clash and a missile within 2000 ticks on seed 42), `RoutingTests.EveryPlannedRouteOnTheRealMapIsLegal` (hostile waters now remove some ship routes, it needs 60 routes and 20 ship legs), and the hunting tests, which rely on chances in `InteractionEngine`.
+- Known limits: waters are a coarse band, not real territorial seas. Interceptors are ordered to move but do not fight a visible battle. A shipment that runs the gauntlet is only tracked, never warned off by diplomacy.
+
 ## Window A roadmap (milestones 15 to 19, one per push)
 - 15 units and power: DONE, in review (see above).
 - 16 logistics routes, hand-offs and their frontend rendering: written, in review (see above).
-- 17 political logic: doctrine for who trades, talks and fights (patrons and clients, proxy wars, escalation ladder), transit permission, and hostile countries actively tracking and hunting shipments that enter their land or waters.
+- 17 political logic: written, in review (see above).
 - 18 ambush, conquest and paralysis: ambush units, territory changing owner after a decisive clash, paralyzed zones that are unusable until rebuilt, and secondary explosions when a stockpile is hit.
 - 19 randomized worlds and the Window A verification pass: seeded variation of powers, relations and positions so the model faces new environments.
 
 ## Still open
-- Run `dotnet test` and `npm test` (frontend) on milestone 15, then check the new silhouette and the dossier power section in the browser.
+- Run `dotnet test` and `npm test` (frontend) on milestone 17, then check the Fronts section and the Cause and Hunted by rows in the browser.
 - README milestone list is old; `documentation/architecture.md` and `documentation/ai_agent.md` are not updated.
 - Window B has no HTML page and ignores the reset event.
 - Reward function: the evaluator (milestone 13) scores tracking only. Reward design and the learning loop come after Window A is finished.

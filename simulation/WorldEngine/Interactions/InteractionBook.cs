@@ -24,10 +24,11 @@ public sealed class InteractionBook
         long dueTick,
         long resolveTick,
         InteractionStatus plannedStatus,
-        ShipmentRoute? route = null)
+        ShipmentRoute? route = null,
+        string cause = "")
     {
         var interaction = new Interaction(
-            nextId++, kind, source, target, mode, cargo, subject, startTick, dueTick, resolveTick, plannedStatus, route);
+            nextId++, kind, source, target, mode, cargo, subject, startTick, dueTick, resolveTick, plannedStatus, route, cause);
         items.Add(interaction);
         return interaction;
     }

@@ -42,13 +42,20 @@ public sealed class RouteNetwork
     private readonly byte[] kind;
     private readonly short[] owner;
     private readonly bool[] canalCell;
+    private readonly short[] water;
+    private readonly bool hasWaters;
+    private readonly List<string> ownerIds = new();
     private readonly Dictionary<string, short> ownerIndex = new();
     private readonly List<Port> ports;
     private readonly List<Canal> canals;
     private readonly ConcurrentDictionary<string, PathResult?> cache = new();
     private readonly ConcurrentDictionary<string, Vector2?> anchors = new();
 
-    public RouteNetwork(TerritoryMap map, IEnumerable<Port> ports, IEnumerable<Canal>? canals = null)
+    public RouteNetwork(
+        TerritoryMap map,
+        IEnumerable<Port> ports,
+        IEnumerable<Canal>? canals = null,
+        float waterReach = 0f)
     {
         this.map = map;
         columns = map.Columns;
@@ -57,6 +64,9 @@ public sealed class RouteNetwork
         kind = new byte[columns * rows];
         owner = new short[columns * rows];
         canalCell = new bool[columns * rows];
+        water = new short[columns * rows];
+        Array.Fill(water, (short)-1);
+        hasWaters = waterReach > 0f;
         for (var i = 0; i < kind.Length; i++)
         {
             var center = Center(i);
@@ -81,6 +91,7 @@ public sealed class RouteNetwork
                     throw new InvalidOperationException("The route network supports at most 64 territory owners.");
                 }
                 ownerIndex[id.Value.Value] = index;
+                ownerIds.Add(id.Value.Value);
             }
             kind[i] = 2;
             owner[i] = index;
@@ -89,6 +100,10 @@ public sealed class RouteNetwork
         foreach (var canal in this.canals)
         {
             Carve(canal);
+        }
+        if (hasWaters)
+        {
+            ComputeWaters(waterReach);
         }
         this.ports = ports
             .Select(p => Harbour(p with { Berth = Center(Index(p.Berth)) }))
@@ -136,6 +151,71 @@ public sealed class RouteNetwork
     }
 
     public bool IsSeaCell(Vector2 point) => kind[Index(point)] == 0;
+
+    public bool HasWaters => hasWaters;
+
+    // The country whose land, or whose coastal waters, hold this point. Open sea and free land belong to nobody.
+    public CountryId? ZoneAt(Vector2 point)
+    {
+        var index = Index(point);
+        if (kind[index] == 2)
+        {
+            return new CountryId(ownerIds[owner[index]]);
+        }
+        if (kind[index] == 0 && water[index] >= 0)
+        {
+            return new CountryId(ownerIds[water[index]]);
+        }
+        return null;
+    }
+
+    private void ComputeWaters(float reach)
+    {
+        var rings = Math.Max(1, (int)Math.Ceiling(reach / cellSize));
+        var limit = rings * rings;
+        for (var index = 0; index < kind.Length; index++)
+        {
+            if (kind[index] != 0)
+            {
+                continue;
+            }
+            var column = index % columns;
+            var row = index / columns;
+            var best = -1;
+            var bestDistance = int.MaxValue;
+            for (var dy = -rings; dy <= rings; dy++)
+            {
+                var y = row + dy;
+                if (y < 0 || y >= rows)
+                {
+                    continue;
+                }
+                for (var dx = -rings; dx <= rings; dx++)
+                {
+                    var x = column + dx;
+                    var distance = dx * dx + dy * dy;
+                    if (x < 0 || x >= columns || distance > limit)
+                    {
+                        continue;
+                    }
+                    var other = y * columns + x;
+                    if (kind[other] != 2)
+                    {
+                        continue;
+                    }
+                    if (distance < bestDistance || (distance == bestDistance && owner[other] < best))
+                    {
+                        best = owner[other];
+                        bestDistance = distance;
+                    }
+                }
+            }
+            water[index] = (short)best;
+        }
+    }
+
+    private bool WaterBlocked(int index, ulong blocked) =>
+        blocked != 0 && water[index] >= 0 && (blocked & (1UL << water[index])) != 0;
 
     private Port? Harbour(Port port)
     {
@@ -195,7 +275,11 @@ public sealed class RouteNetwork
         switch (medium)
         {
             case Medium.Sea:
-                return k == 0 ? 1f : Blocked;
+                if (k != 0)
+                {
+                    return Blocked;
+                }
+                return WaterBlocked(index, blocked) ? Blocked : 1f;
             case Medium.Land:
                 if (k == 0)
                 {
@@ -292,7 +376,10 @@ public sealed class RouteNetwork
         if (medium == Medium.Sea)
         {
             own = target = -1;
-            blocked = 0;
+            if (!hasWaters)
+            {
+                blocked = 0;
+            }
         }
         var start = Index(from);
         var goal = Index(to);
@@ -641,7 +728,7 @@ public sealed class RouteNetwork
                     switch (leg.Carrier)
                     {
                         case UnitKind.CargoShip:
-                            if (kind[index] != 0)
+                            if (kind[index] != 0 || WaterBlocked(index, blocked))
                             {
                                 return false;
                             }

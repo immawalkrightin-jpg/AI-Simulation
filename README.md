@@ -85,26 +85,32 @@ python -m http.server 5500
     - [x] Tests: routes, hand-offs, bare worlds still work
     - [x] Run `dotnet test` and `npm test`
     - [x] Manual check in the browser (route lines, hand-off rings, carrier change)
-17. Cold War political logic and hunting of shipments
-    - [ ] Doctrine object supplied by the scenario
-    - [ ] Patron-to-client supply flows inside each bloc
-    - [ ] Summit and arms-limitation talks between the blocs
-    - [ ] Proxy conflicts only where the Cold War had them (Korea, Vietnam, Middle East, Sino-Indian border)
-    - [ ] Escalation ladder: tension, incident, clash, missile
-    - [ ] Cool-down so relations settle instead of oscillating
-    - [ ] Transit permission: routes avoid hostile land and waters by default
-    - [ ] Hostile countries track and hunt shipments that enter their land or waters
-    - [ ] Event log states the cause of each event
-    - [ ] Keep no direct Soviet-American or Pact-NATO war
-    - [ ] Engine without a doctrine keeps current behaviour
-    - [ ] Tests: doctrine rules, determinism, long run
-18. Ambush, conquest, paralyzed zones and secondary explosions
+17. Cold War political logic and hunting of shipments (done)
+    - [x] Doctrine object supplied by the scenario (`world.Doctrine`)
+    - [x] Patron-to-client supply flows inside each bloc (and to non-aligned clients)
+    - [x] Summit and arms-limitation talks between the blocs
+    - [x] Proxy conflicts only where the Cold War had them (Korea, Indochina, Sino-Indian border, Suez, plus capped German and Caribbean fronts)
+    - [x] Escalation ladder: tension, incident, clash, missile
+    - [x] Cool-down so relations settle instead of oscillating (quiet period and ceasefire talks)
+    - [x] Transit permission: routes avoid hostile land and coastal waters by default
+    - [x] Running the gauntlet: aid may take a hostile route only when no safe lane exists
+    - [x] Hostile countries track and hunt shipments that enter their land or waters
+    - [x] Event log states the cause of each event
+    - [x] Keep no direct Soviet-American or Pact-NATO war
+    - [x] Engine without a doctrine keeps current behaviour
+    - [x] Frontend: cause and hunter in the shipment tooltip, Fronts section in the dossier
+    - [x] Tests: doctrine rules, ladder, hunting, waters, determinism, long run
+    - [x] Run `dotnet test` and `npm test`
+    - [x] Manual check in the browser (Fronts section, Cause and Hunted by rows)
+18. Ambush, conquest, paralyzed zones and secondary explosions (in progress)
     - [ ] Ambush units that wait on routes and chokepoints
     - [ ] Territory changes owner after a decisive clash
-    - [ ] Paralyzed zones, unusable by the owner until repaired
-    - [ ] Secondary explosion when a depot or stockpile is hit
+    - [x] Paralyzed zones created by a missile strike, healing over time, with a reduced supply income and no shipping while badly hit
+    - [x] Secondary explosion when a stockpile is hit
+    - [x] Paralyzed zones in the snapshot (`Zones`)
     - [ ] Frontend overlays for conquered land and paralyzed zones
-    - [ ] Tests: ownership change, paralysis and repair, determinism
+    - [x] Tests so far: zone severity and repair, creation, shipping block, secondary blasts, bare worlds unchanged
+    - [ ] Tests: ownership change, ambush, determinism
 19. Randomized worlds and Window A verification
     - [ ] Seeded variation of powers, stockpiles, relations and positions inside Cold War limits
     - [ ] Default seed keeps the historical set-up

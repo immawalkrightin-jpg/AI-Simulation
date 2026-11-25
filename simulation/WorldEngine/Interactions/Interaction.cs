@@ -39,9 +39,12 @@ public sealed class Interaction
     public string Subject { get; }
     public long StartTick { get; }
     public long DueTick { get; }
-    public long ResolveTick { get; }
-    public InteractionStatus PlannedStatus { get; }
+    public long ResolveTick { get; private set; }
+    public InteractionStatus PlannedStatus { get; private set; }
     public ShipmentRoute? Route { get; }
+    public string Cause { get; }
+    public CountryId? Tracker { get; private set; }
+    public CountryId? InterceptedBy { get; private set; }
     public InteractionStatus Status { get; private set; } = InteractionStatus.Active;
     public long? EndTick { get; private set; }
 
@@ -57,7 +60,8 @@ public sealed class Interaction
         long dueTick,
         long resolveTick,
         InteractionStatus plannedStatus,
-        ShipmentRoute? route = null)
+        ShipmentRoute? route = null,
+        string cause = "")
     {
         Id = id;
         Kind = kind;
@@ -71,6 +75,16 @@ public sealed class Interaction
         ResolveTick = resolveTick;
         PlannedStatus = plannedStatus;
         Route = route;
+        Cause = cause;
+    }
+
+    public void Track(CountryId by) => Tracker = by;
+
+    public void Intercept(CountryId by, long tick)
+    {
+        InterceptedBy = by;
+        PlannedStatus = InteractionStatus.Intercepted;
+        ResolveTick = tick;
     }
 
     public void Complete(long tick)

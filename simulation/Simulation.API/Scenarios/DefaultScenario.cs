@@ -1,5 +1,6 @@
 using System.Numerics;
 using WorldEngine.Countries;
+using WorldEngine.Diplomacy;
 using WorldEngine.Interactions;
 using WorldEngine.Routing;
 using WorldEngine.Sensors;
@@ -20,6 +21,7 @@ public static class DefaultScenario
     private const float BerthSearch = 40;
     private const int SettleAttempts = 6;
     private const float SettleShrink = 0.18f;
+    private const float WaterReach = 4f;
 
     // Unit roster codes: I infantry, A artillery, K tank, C armored car, W warship, P warplane,
     // H helicopter, T truck, G cargo ship, L cargo plane. A code is repeated for each unit of that kind.
@@ -145,7 +147,7 @@ public static class DefaultScenario
         var canals = CanalSites
             .Select(c => new Canal(c.Name, Place(c.FromLon, c.FromLat), Place(c.ToLon, c.ToLat)))
             .ToList();
-        return new RouteNetwork(territory, ports, canals);
+        return new RouteNetwork(territory, ports, canals, WaterReach);
     }
 
     private static readonly (string, string, double)[] RelationOverrides =
@@ -164,6 +166,53 @@ public static class DefaultScenario
     };
 
     private static readonly string[] EastEuropeanAllies = { "GDR", "POL", "CZE", "HUN", "ROU", "BGR", "PRC" };
+
+    private static AidTie Aid(string patron, string client, string reason) =>
+        new(new CountryId(patron), new CountryId(client), reason);
+
+    private static ProxyFront Front(string name, string first, string second, Rung start, Rung ceiling, string reason) =>
+        new(name, new CountryId(first), new CountryId(second), start, ceiling, reason);
+
+    // Who may trade, talk and fight, and why. Direct Soviet-American and Pact-NATO war is forbidden outright.
+    private static Doctrine BuildDoctrine(IEnumerable<(CountryId, CountryId)> forbidden)
+    {
+        const string pact = "the Warsaw Pact keeps its allied armies supplied";
+        const string nato = "NATO allies draw on American stocks";
+        var aid = new List<AidTie>
+        {
+            Aid("USSR", "GDR", pact), Aid("USSR", "POL", pact), Aid("USSR", "CZE", pact),
+            Aid("USSR", "HUN", pact), Aid("USSR", "ROU", pact), Aid("USSR", "BGR", pact),
+            Aid("USSR", "PRK", "Moscow sustains North Korea against the South"),
+            Aid("USSR", "VNM", "Moscow arms Hanoi against the American intervention"),
+            Aid("USSR", "CUB", "Moscow props up its Caribbean client"),
+            Aid("USSR", "IND", "Moscow courts non-aligned India with arms credits"),
+            Aid("USSR", "EGY", "Moscow courts Egypt after the Suez crisis"),
+            Aid("PRC", "PRK", "Beijing backs its neighbour on the Korean front"),
+            Aid("USA", "GBR", nato), Aid("USA", "CAN", nato), Aid("USA", "FRA", nato), Aid("USA", "FRG", nato),
+            Aid("USA", "ITA", nato), Aid("USA", "TUR", nato),
+            Aid("USA", "JPN", "Washington underwrites Japanese security"),
+            Aid("USA", "KOR", "Washington underwrites South Korean security"),
+            Aid("USA", "AUS", "Washington underwrites the Pacific alliance"),
+            Aid("USA", "BRA", "Washington keeps South America inside its sphere"),
+            Aid("USA", "IRN", "Washington keeps Iran inside its sphere"),
+            Aid("USA", "YUG", "Washington rewards Belgrade for breaking with Moscow")
+        };
+        var fronts = new List<ProxyFront>
+        {
+            Front("Korean peninsula", "PRK", "KOR", Rung.Incident, Rung.Missile, "the armistice line is still disputed"),
+            Front("Indochina front", "USA", "VNM", Rung.Clash, Rung.Missile, "American forces back the south against Hanoi"),
+            Front("Sino-Indian border", "IND", "PRC", Rung.Tension, Rung.Clash, "the Himalayan frontier is disputed"),
+            Front("inner German border", "FRG", "GDR", Rung.Tension, Rung.Incident, "the divided frontier is watched by both sides"),
+            Front("Caribbean standoff", "USA", "CUB", Rung.Tension, Rung.Incident, "Washington and Havana confront each other over the embargo"),
+            Front("Suez dispute", "EGY", "GBR", Rung.Calm, Rung.Clash, "the canal remains contested")
+        };
+        var summits = new List<SummitTie>
+        {
+            new(new CountryId("USSR"), new CountryId("USA"), "arms limitation", "the nuclear standoff demands a channel between the superpowers"),
+            new(new CountryId("USA"), new CountryId("PRC"), "opening talks", "Washington tries to split Beijing from Moscow")
+        };
+        return new Doctrine(aid, fronts, summits, forbidden);
+    }
 
     private static readonly Dictionary<UnitKind, int> KindSector = new()
     {
@@ -378,6 +427,8 @@ public static class DefaultScenario
             noDirect.Add((new CountryId("USA"), new CountryId(id)));
         }
         noDirect.Add((new CountryId("USA"), soviet));
+        world.Doctrine = BuildDoctrine(noDirect);
+        world.Escalation = new EscalationLadder(world.Doctrine);
 
         return new WorldSimulation(
             world,

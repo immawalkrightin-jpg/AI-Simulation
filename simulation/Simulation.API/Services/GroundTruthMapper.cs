@@ -135,7 +135,31 @@ public static class GroundTruthMapper
                     i.DueTick,
                     i.EndTick,
                     CarrierOf(i, state.Clock.Tick),
-                    RouteOf(i)))
+                    RouteOf(i),
+                    i.Cause.Length > 0 ? i.Cause : null,
+                    (i.InterceptedBy ?? i.Tracker)?.Value))
+                .ToList(),
+            state.Escalation?.Fronts
+                .Select(f => new FrontDto(
+                    f.Front.Name,
+                    f.Front.First.Value,
+                    f.Front.Second.Value,
+                    f.Rung.ToString(),
+                    f.Front.Ceiling.ToString(),
+                    f.Front.Reason))
+                .ToList(),
+            state.Zones
+                .Active(state.Clock.Tick)
+                .Select(z => new ZoneDto(
+                    z.Id,
+                    z.Owner.Value,
+                    z.Center.X,
+                    z.Center.Y,
+                    z.Radius,
+                    Math.Round(z.SeverityAt(state.Clock.Tick), 3),
+                    z.StartTick,
+                    z.RepairTick,
+                    z.Cause))
                 .ToList());
     }
 }

@@ -24,6 +24,9 @@ public sealed class WorldState
     public CountryId? ModelCountry { get; set; }
     public TerritoryMap? Territory { get; set; }
     public RouteNetwork? Routes { get; set; }
+    public Doctrine? Doctrine { get; set; }
+    public EscalationLadder? Escalation { get; set; }
+    public ZoneBook Zones { get; } = new();
     public Random Rng { get; }
     public float Width { get; }
     public float Height { get; }

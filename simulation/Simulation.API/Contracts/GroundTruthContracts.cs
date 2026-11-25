@@ -66,7 +66,28 @@ public sealed record InteractionDto(
     long DueTick,
     long? EndTick,
     string? Carrier = null,
-    RouteDto? Route = null);
+    RouteDto? Route = null,
+    string? Cause = null,
+    string? Hunter = null);
+
+public sealed record FrontDto(
+    string Name,
+    string First,
+    string Second,
+    string Rung,
+    string Ceiling,
+    string Reason);
+
+public sealed record ZoneDto(
+    int Id,
+    string Owner,
+    float X,
+    float Y,
+    float Radius,
+    double Severity,
+    long StartTick,
+    long RepairTick,
+    string Cause);
 
 public sealed record GroundTruthSnapshot(
     long Tick,
@@ -78,6 +99,8 @@ public sealed record GroundTruthSnapshot(
     IReadOnlyList<RelationDto> Relations,
     IReadOnlyList<SensorDto> Sensors,
     IReadOnlyList<EventDto> Events,
-    IReadOnlyList<InteractionDto> Interactions);
+    IReadOnlyList<InteractionDto> Interactions,
+    IReadOnlyList<FrontDto>? Fronts = null,
+    IReadOnlyList<ZoneDto>? Zones = null);
 
 public sealed record SimulationStatus(long Tick, bool Paused, int Seed = 0, double Speed = 1);
