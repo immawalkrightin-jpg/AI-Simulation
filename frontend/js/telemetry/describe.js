@@ -18,6 +18,8 @@ const KIND_LABELS = {
 const CARRIER_LABELS = { Truck: "Truck", CargoShip: "Cargo ship", Transport: "Transport plane", CargoPlane: "Cargo plane", Helicopter: "Helicopter" };
 const BLOC_LABELS = { East: "East bloc", West: "West bloc", NonAligned: "Non-aligned" };
 const OPERATION_LABELS = { Negotiation: "Negotiation", SupplyShipment: "Supply shipment", Clash: "Clash", MissileStrike: "Missile strike" };
+const RUNG_LABELS = { Calm: "Calm", Tension: "Tension", Incident: "Incident", Clash: "Clash", Missile: "Missile" };
+const RUNG_ORDER = ["Calm", "Tension", "Incident", "Clash", "Missile"];
 
 export const LOW_SHARE = 0.3;
 
@@ -25,6 +27,20 @@ export const kindLabel = (kind) => KIND_LABELS[symbolName(kind)] || "Unknown uni
 export const carrierLabel = (carrier) => CARRIER_LABELS[carrier] || carrier;
 export const blocLabel = (bloc) => BLOC_LABELS[bloc] || bloc;
 export const operationLabel = (kind) => OPERATION_LABELS[kind] || kind;
+export const rungLabel = (rung) => RUNG_LABELS[rung] || rung;
+
+export function frontsFor(snapshot, id) {
+  return (snapshot.fronts || [])
+    .filter((f) => f.first === id || f.second === id)
+    .map((f) => ({
+      name: f.name,
+      other: f.first === id ? f.second : f.first,
+      rung: rungLabel(f.rung),
+      level: Math.max(0, RUNG_ORDER.indexOf(f.rung)),
+      ceiling: rungLabel(f.ceiling)
+    }))
+    .sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));
+}
 
 export function percent(value, max) {
   if (!max || max <= 0) {
@@ -98,7 +114,9 @@ export function tooltipFor(snapshot, hit) {
         ["Mode", item.mode],
         ["Cargo", String(Math.round(item.cargo))],
         ["Route", routeText(snapshot, item)],
-        ["Status", item.status]
+        ["Status", item.status],
+        ...(item.cause ? [["Cause", item.cause]] : []),
+        ...(item.hunter ? [["Hunted by", item.hunter]] : [])
       ]
     };
   }
@@ -140,7 +158,8 @@ export function powerFor(snapshot, id) {
 function shipmentDetail(snapshot, item) {
   const base = `${carrierLabel(item.carrier) || item.mode} ${Math.round(item.cargo)}`;
   const leg = legText(snapshot, item);
-  return leg ? `${base}, leg ${leg}` : base;
+  const text = leg ? `${base}, leg ${leg}` : base;
+  return item.hunter ? `${text}, hunted by ${item.hunter}` : text;
 }
 
 export function dossierFor(snapshot, id, peaks) {
@@ -192,6 +211,7 @@ export function dossierFor(snapshot, id, peaks) {
     ammunition: { value: country.ammunition, ratio: ammunitionPeak > 0 ? country.ammunition / ammunitionPeak : 0 },
     units: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)),
     operations,
+    fronts: frontsFor(snapshot, id),
     hostile: relations.slice(0, 3).filter((r) => r.value < 0),
     closest: relations.slice(-3).reverse().filter((r) => r.value > 0)
   };

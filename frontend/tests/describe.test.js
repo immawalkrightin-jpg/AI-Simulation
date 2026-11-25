@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocLabel, carrierLabel, chainText, dossierFor, kindLabel, legText, percent, powerFor, routeText, tooltipFor } from "../js/telemetry/describe.js";
+import { blocLabel, carrierLabel, chainText, dossierFor, frontsFor, kindLabel, legText, percent, powerFor, rungLabel, routeText, tooltipFor } from "../js/telemetry/describe.js";
 
 const snapshot = {
   countries: [
@@ -194,4 +194,39 @@ test("routes: the shipment tooltip adds the leg and the chain", () => {
 test("routes: the dossier shows which leg a shipment is on", () => {
   const dossier = dossierFor(routed, "USSR", new Map());
   assert.equal(dossier.operations[0].detail, "Cargo ship 50, leg 2 of 3");
+});
+
+const political = {
+  ...snapshot,
+  fronts: [
+    { name: "Korean peninsula", first: "PRK", second: "KOR", rung: "Incident", ceiling: "Missile", reason: "x" },
+    { name: "Indochina front", first: "USA", second: "VNM", rung: "Clash", ceiling: "Missile", reason: "y" },
+    { name: "Caribbean standoff", first: "USA", second: "CUB", rung: "Tension", ceiling: "Incident", reason: "z" }
+  ],
+  interactions: [
+    { ...snapshot.interactions[0], cause: "Moscow props up its client", hunter: "TUR" }
+  ]
+};
+
+test("politics: rungs read as words and fronts are listed for a country, worst first", () => {
+  assert.equal(rungLabel("Incident"), "Incident");
+  assert.deepEqual(
+    frontsFor(political, "USA").map((f) => [f.name, f.other, f.rung, f.level]),
+    [["Indochina front", "VNM", "Clash", 3], ["Caribbean standoff", "CUB", "Tension", 1]]
+  );
+  assert.deepEqual(frontsFor(political, "USSR"), []);
+  assert.equal(dossierFor(political, "USA", new Map()).fronts.length, 2);
+});
+
+test("politics: an engine without fronts gives an empty list", () => {
+  assert.deepEqual(frontsFor(snapshot, "USA"), []);
+  assert.deepEqual(dossierFor(snapshot, "USA", new Map()).fronts, []);
+});
+
+test("politics: the shipment tooltip adds the cause and the hunter only when they exist", () => {
+  const tip = tooltipFor(political, { type: "shipment", id: 5, carrier: "CargoShip" });
+  assert.deepEqual(tip.rows.slice(-2), [["Cause", "Moscow props up its client"], ["Hunted by", "TUR"]]);
+  const plain = tooltipFor(snapshot, { type: "shipment", id: 5, carrier: "CargoShip" });
+  assert.equal(plain.rows.some((r) => r[0] === "Cause" || r[0] === "Hunted by"), false);
+  assert.equal(dossierFor(political, "USSR", new Map()).operations[0].detail, "Cargo ship 64, hunted by TUR");
 });

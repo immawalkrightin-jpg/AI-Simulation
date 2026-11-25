@@ -61,6 +61,12 @@ function operationLine(op) {
   return line;
 }
 
+function frontLine(front) {
+  const line = el("li", front.level >= 3 ? "hostile" : "");
+  line.append(el("span", "", front.name), el("b", "", front.rung), el("small", "", `against ${front.other}, can reach ${front.ceiling.toLowerCase()}`));
+  return line;
+}
+
 function relationLine(relation) {
   const line = el("li");
   line.append(el("span", "", relation.other), el("small", "", `${relation.state} ${relation.value.toFixed(2)}`));
@@ -108,6 +114,7 @@ export class Dossier {
       section("Stocks", meter("Supplies", data.supplies), meter("Ammunition", data.ammunition)),
       section("Units", list(data.units.map(unitLine), "No units")),
       section("Active operations", list(data.operations.map(operationLine), "None active")),
+      ...(data.fronts.length > 0 ? [section("Fronts", list(data.fronts.map(frontLine), "None"))] : []),
       section("Relations", list([...data.hostile.map((r) => relationLine({ ...r, other: `${r.other} (hostile)` })), ...data.closest.map((r) => relationLine({ ...r, other: `${r.other} (closest)` }))], "No notable relations")),
       back
     );
