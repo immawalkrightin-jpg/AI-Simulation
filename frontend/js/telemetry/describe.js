@@ -1,4 +1,5 @@
 import { symbolName } from "../units/symbols.js";
+import { chainOf, legIndexAt, progressOf, routeLegs } from "../maps/route.js";
 
 const KIND_LABELS = {
   Infantry: "Infantry",
@@ -14,7 +15,7 @@ const KIND_LABELS = {
   Unknown: "Unknown unit"
 };
 
-const CARRIER_LABELS = { Truck: "Truck", CargoShip: "Cargo ship", Transport: "Transport plane", Helicopter: "Helicopter" };
+const CARRIER_LABELS = { Truck: "Truck", CargoShip: "Cargo ship", Transport: "Transport plane", CargoPlane: "Cargo plane", Helicopter: "Helicopter" };
 const BLOC_LABELS = { East: "East bloc", West: "West bloc", NonAligned: "Non-aligned" };
 const OPERATION_LABELS = { Negotiation: "Negotiation", SupplyShipment: "Supply shipment", Clash: "Clash", MissileStrike: "Missile strike" };
 
@@ -38,6 +39,18 @@ export function routeText(snapshot, item) {
     return country ? country.name : id;
   };
   return `${name(item.source)} to ${name(item.target)}`;
+}
+
+export function chainText(legs) {
+  return chainOf(legs).map(carrierLabel).join(" > ");
+}
+
+export function legText(snapshot, item) {
+  const legs = routeLegs(item);
+  if (!legs) {
+    return null;
+  }
+  return `${legIndexAt(legs, progressOf(item, snapshot.tick)) + 1} of ${legs.length}`;
 }
 
 export function tooltipFor(snapshot, hit) {
@@ -76,10 +89,12 @@ export function tooltipFor(snapshot, hit) {
     if (!item) {
       return null;
     }
+    const legs = routeLegs(item);
     return {
       title: "Supply shipment",
       rows: [
         ["Carrier", carrierLabel(hit.carrier || item.carrier) || "unknown"],
+        ...(legs ? [["Leg", legText(snapshot, item)], ["Chain", chainText(legs)]] : []),
         ["Mode", item.mode],
         ["Cargo", String(Math.round(item.cargo))],
         ["Route", routeText(snapshot, item)],
@@ -122,6 +137,12 @@ export function powerFor(snapshot, id) {
   return { value: country.power, rank: ranked.findIndex((c) => c.id === id) + 1, of: ranked.length };
 }
 
+function shipmentDetail(snapshot, item) {
+  const base = `${carrierLabel(item.carrier) || item.mode} ${Math.round(item.cargo)}`;
+  const leg = legText(snapshot, item);
+  return leg ? `${base}, leg ${leg}` : base;
+}
+
 export function dossierFor(snapshot, id, peaks) {
   const country = snapshot.countries.find((c) => c.id === id);
   if (!country) {
@@ -150,7 +171,7 @@ export function dossierFor(snapshot, id, peaks) {
       hostile: i.kind === "Clash" || i.kind === "MissileStrike",
       direction: i.source === id ? "out" : "in",
       other: i.source === id ? i.target : i.source,
-      detail: i.kind === "SupplyShipment" ? `${carrierLabel(i.carrier) || i.mode} ${Math.round(i.cargo)}` : i.kind === "Negotiation" ? i.subject : ""
+      detail: i.kind === "SupplyShipment" ? shipmentDetail(snapshot, i) : i.kind === "Negotiation" ? i.subject : ""
     }));
   const relations = snapshot.relations
     .filter((r) => r.first === id || r.second === id)

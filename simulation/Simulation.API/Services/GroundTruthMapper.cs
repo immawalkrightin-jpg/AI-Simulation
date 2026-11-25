@@ -1,6 +1,8 @@
+using System.Runtime.CompilerServices;
 using Simulation.API.Contracts.GroundTruth;
 using WorldEngine.Countries;
 using WorldEngine.Interactions;
+using WorldEngine.Routing;
 using WorldEngine.Sensors;
 using WorldEngine.World;
 
@@ -8,6 +10,44 @@ namespace Simulation.API.Services;
 
 public static class GroundTruthMapper
 {
+    private static readonly ConditionalWeakTable<ShipmentRoute, RouteDto> RouteCache = new();
+
+    public static string? CarrierOf(Interaction interaction, long tick)
+    {
+        if (interaction.Kind != InteractionKind.SupplyShipment)
+        {
+            return null;
+        }
+        if (interaction.Route is null)
+        {
+            return CarrierOf(interaction.Kind, interaction.Mode);
+        }
+        return interaction.Route.At(interaction.ProgressAt(tick)).Carrier.ToString();
+    }
+
+    public static RouteDto? RouteOf(Interaction interaction)
+    {
+        if (interaction.Kind != InteractionKind.SupplyShipment || interaction.Route is null)
+        {
+            return null;
+        }
+        return RouteCache.GetValue(interaction.Route, BuildRoute);
+    }
+
+    private static RouteDto BuildRoute(ShipmentRoute route) =>
+        new(
+            route.Exposure,
+            route.Legs
+                .Select(leg => new RouteLegDto(
+                    leg.Carrier.ToString(),
+                    leg.Mode.ToString(),
+                    Math.Round(leg.StartFraction, 5),
+                    Math.Round(leg.EndFraction, 5),
+                    leg.Points
+                        .SelectMany(p => new[] { MathF.Round(p.X, 1), MathF.Round(p.Y, 1) })
+                        .ToList()))
+                .ToList());
+
     public static string? CarrierOf(InteractionKind kind, TransportMode mode)
     {
         if (kind != InteractionKind.SupplyShipment)
@@ -94,7 +134,8 @@ public static class GroundTruthMapper
                     i.StartTick,
                     i.DueTick,
                     i.EndTick,
-                    CarrierOf(i.Kind, i.Mode)))
+                    CarrierOf(i, state.Clock.Tick),
+                    RouteOf(i)))
                 .ToList());
     }
 }

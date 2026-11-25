@@ -1,5 +1,6 @@
 using System.Numerics;
 using WorldEngine.Countries;
+using WorldEngine.Routing;
 using WorldEngine.Units;
 using WorldEngine.World;
 
@@ -186,6 +187,23 @@ public sealed class InteractionEngine
         var b = Pick(rng, receivers);
         var cargo = Math.Round(Math.Min(a.Supplies * 0.15, 40 + rng.NextDouble() * 60));
         var mode = ChooseMode(rng, a, b);
+        ShipmentRoute? route = null;
+        if (world.Routes is { } network)
+        {
+            var planned = network.PlanBest(
+                mode,
+                a,
+                b,
+                countries,
+                id => world.Relations.Get(a.Id, id) < RouteNetwork.HostileThreshold
+                    || world.Relations.Get(b.Id, id) < RouteNetwork.HostileThreshold);
+            if (planned is null)
+            {
+                return;
+            }
+            mode = planned.Value.Mode;
+            route = planned.Value.Route;
+        }
         var distance = Vector2.Distance(a.Capital, b.Capital);
         var speed = mode switch
         {
@@ -193,14 +211,17 @@ public sealed class InteractionEngine
             TransportMode.Naval => 18.0,
             _ => 70.0
         };
-        var duration = (int)Math.Clamp(distance / speed + 6, 8, 70);
-        var risk = 0.08 + (mode == TransportMode.Naval ? 0.10 : 0) + (mode == TransportMode.Air ? 0.05 : 0);
+        var duration = route is null
+            ? (int)Math.Clamp(distance / speed + 6, 8, 70)
+            : (int)Math.Clamp(Math.Round(route.TotalTicks) + 6, 8, 160);
+        var risk = 0.08 + (mode == TransportMode.Naval ? 0.10 : 0) + (mode == TransportMode.Air ? 0.05 : 0)
+            + (route is null ? 0 : Math.Min(0.1, route.Exposure * 0.002));
         var intercepted = rng.NextDouble() < risk;
         var resolve = tick + (intercepted ? Math.Max(2, (int)(duration * (0.2 + rng.NextDouble() * 0.7))) : duration);
         a.AddSupplies(-cargo);
         world.Interactions.Open(
             InteractionKind.SupplyShipment, a.Id, b.Id, mode, cargo, "supplies", tick, tick + duration, resolve,
-            intercepted ? InteractionStatus.Intercepted : InteractionStatus.Succeeded);
+            intercepted ? InteractionStatus.Intercepted : InteractionStatus.Succeeded, route);
         Log(world, "supply_dispatched", $"{a.Name} sends {cargo:0} supplies to {b.Name} by {mode.ToString().ToLowerInvariant()}");
     }
 

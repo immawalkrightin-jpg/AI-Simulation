@@ -38,7 +38,7 @@ export const LEGEND = [
   { id: "carrier:Truck", group: "Carriers", kind: "Truck", label: "Truck", meaning: "Supply shipment by ground." },
   { id: "carrier:CargoShip", group: "Carriers", kind: "CargoShip", label: "Cargo ship", meaning: "Supply shipment by sea." },
   { id: "carrier:Transport", group: "Carriers", kind: "Transport", label: "Transport plane", meaning: "Supply shipment by air." },
-  { id: "carrier:Helicopter", group: "Carriers", kind: "Helicopter", label: "Helicopter", meaning: "Shipment by helicopter. Shown only when the engine reports it." },
+  { id: "carrier:Helicopter", group: "Carriers", kind: "Helicopter", label: "Helicopter", meaning: "Shipment by helicopter, from a dock to a capital with no land link." },
   { id: "sensor:Radar", group: "Sensors and installations", kind: "Radar", label: "Radar", meaning: "Radar station. The dashed ring is its range." },
   { id: "sensor:Optical", group: "Sensors and installations", kind: "Optical", label: "Optical", meaning: "Optical sensor. The dashed ring is its range." },
   { id: "sensor:Sonar", group: "Sensors and installations", kind: "Sonar", label: "Sonar", meaning: "Sonar. The dashed ring is its range." },

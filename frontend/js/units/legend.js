@@ -58,7 +58,7 @@ const LINES = [
   {
     id: "line:supply-ground",
     label: "Supply by ground",
-    meaning: "Solid line. The truck is the carrier.",
+    meaning: "Solid line. A truck carries the cargo over land.",
     draw(ctx, w, h) {
       route(ctx, w, h, INK_RGB, 0.8, DASH.Ground);
       carrierHead(ctx, "Truck", w - 12, h / 2, 0);
@@ -67,7 +67,7 @@ const LINES = [
   {
     id: "line:supply-naval",
     label: "Supply by sea",
-    meaning: "Dotted line. The cargo ship is the carrier.",
+    meaning: "Dotted line. A cargo ship carries the cargo across open water.",
     draw(ctx, w, h) {
       route(ctx, w, h, INK_RGB, 0.8, DASH.Naval);
       carrierHead(ctx, "CargoShip", w - 12, h / 2, 0);
@@ -76,7 +76,7 @@ const LINES = [
   {
     id: "line:supply-air",
     label: "Supply by air",
-    meaning: "Long-dash line. The transport plane is the carrier.",
+    meaning: "Long-dash line. A cargo plane or a helicopter carries the cargo.",
     draw(ctx, w, h) {
       route(ctx, w, h, INK_RGB, 0.8, DASH.Air);
       carrierHead(ctx, "Transport", w - 12, h / 2, Math.PI / 2);
@@ -211,6 +211,16 @@ const MARKERS = [
       ctx.moveTo(w - 12, h / 2 - 4);
       ctx.lineTo(w - 12, h / 2 + 4);
       ctx.stroke();
+    }
+  },
+  {
+    id: "marker:handoff",
+    label: "Hand-off point",
+    meaning: "A dock or an airfield where a shipment changes carrier. Ring with side ticks, filled once the cargo has passed it.",
+    draw(ctx, w, h) {
+      backing(ctx, w / 2, h / 2, 7);
+      glyph(ctx, "handoff", w / 2, h / 2, 8, INK_RGB, 0.9);
+      glyph(ctx, "dot", w / 2, h / 2, 1.8, INK_RGB, 0.9);
     }
   },
   {

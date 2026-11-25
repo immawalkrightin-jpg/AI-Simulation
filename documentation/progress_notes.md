@@ -66,11 +66,21 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Tests: `UnitRosterTests.cs` (catalog completeness, roles, power maths, damage, tier order on two seeds, no legacy kinds in the scenario, catalog start figures, snapshot power, radar and sonar per kind). `CarrierAndSpacingTests` and `TerritoryTests` updated for the new kinds. Frontend: `symbols.test.js` and `describe.test.js` updated and extended.
 - Verified here: the engine compiles; a console harness that includes the real `DefaultScenario.cs` and the real map passes every milestone invariant (tier order, legal start cells, spacing limits, 1500 ticks legal on seeds 42 and 7, every interaction kind within 2000 ticks, determinism, sensors per kind). 32 frontend tests pass under Node 22.
 - NOT verified here: the xUnit suite (the sandbox cannot restore NuGet packages), `Simulation.API` and `Simulation.Tests` compilation, and the browser rendering of the new silhouette and dossier section.
-- Open: `Sensor.RandomOtherKind` draws from every kind, so a misclassified contact can come back as a legacy kind such as Armor. Harmless, left alone.
+- Resolved in milestone 16: `Sensor.RandomOtherKind` no longer draws legacy kinds.
+
+## Milestone 16: logistics routing, hand-offs and route rendering (written; in review)
+- Engine: `Routing/RouteNetwork.cs` (ports, canal cuts, A* over sea, land and air on the territory raster, hostile land blocked, cache) and `Routing/ShipmentRoute.cs` (legs, hand-offs, `At(progress)`). `InteractionEngine.Ship` plans with `PlanBest` and drops the shipment when nothing is legal. `Interaction.ProgressAt` is the single progress rule shared with the frontend.
+- Ports: 33 sites, four for the Soviet Union (Murmansk, Baltiysk, Sevastopol, Vladivostok). Each berth is re-snapped to a water cell that touches its owner's land, so the truck-to-dock leg is always a single cell and `IsLegal` holds. A port with no such cell is dropped.
+- Canal cuts (shipping only, trucks may still cross them): Turkish Straits, Suez Canal, Gulf of Suez and Red Sea, Panama.
+- Contract (additive): `InteractionDto.Route` (`RouteDto { Exposure, Legs }`, legs carry carrier, mode, start and end share, flat rounded points). `Carrier` is now the carrier of the current leg. `GroundTruthMapper` caches route DTOs per route.
+- Frontend: `maps/route.js` (pure), shipments follow the engine polyline, each leg in the dash of its mode, carrier symbol changes at each hand-off, hand-off ring (`handoff` glyph, manual row `marker:handoff`), tooltip Leg and Chain rows, dossier leg text.
+- Polish: `Sensor.RandomOtherKind` no longer misclassifies into the legacy kinds. Comments removed from the routing files; Cuba's capital in the sea is handled by the anchor lookup.
+- Tests: `RoutingTests.cs` (synthetic maps: truck, ship, truck; helicopter for an unlinked capital; hostile wall; no-port country; determinism; real map: ports beside land, four Soviet seas, ocean connectivity through the chokepoints, every planned route legal, running world, snapshot route and carrier parity, bare worlds). `CarrierAndSpacingTests` updated. Frontend: `route.test.js`, new cases in `describe.test.js` and `symbols.test.js`.
+- NOT verified here: nothing was compiled or run (no copy of the project was made, per the working rule). Run `dotnet test` and `npm test`, then look at a shipment in the browser. The ocean connectivity theory cases are the first thing to read if anything fails: they depend on the real raster.
 
 ## Window A roadmap (milestones 15 to 19, one per push)
 - 15 units and power: DONE, in review (see above).
-- 16 logistics routes, hand-offs and their frontend rendering: shipments become multi-leg (truck to port, cargo ship through sea lanes, truck or plane onward), never a cargo ship over land, with a visible hand-off between carriers. Routes avoid or accept risk through foreign and hostile territory.
+- 16 logistics routes, hand-offs and their frontend rendering: written, in review (see above).
 - 17 political logic: doctrine for who trades, talks and fights (patrons and clients, proxy wars, escalation ladder), transit permission, and hostile countries actively tracking and hunting shipments that enter their land or waters.
 - 18 ambush, conquest and paralysis: ambush units, territory changing owner after a decisive clash, paralyzed zones that are unusable until rebuilt, and secondary explosions when a stockpile is hit.
 - 19 randomized worlds and the Window A verification pass: seeded variation of powers, relations and positions so the model faces new environments.

@@ -5,11 +5,15 @@ import { classifyExternal, countryFrame, ringsBounds } from "./view.js";
 import { fadeLabels, placeLabels } from "./labels.js";
 import { layoutUnits } from "./cluster.js";
 import { carrierOf, screenHeading, unitHeading } from "./motion.js";
+import { handOffs, positionAt, routeLegs, segmentsBetween, subdivide } from "./route.js";
 import { drawSymbol, isAirborne, symbolName } from "../units/symbols.js";
 import { DASH, backing, clusterBadge, foreignRing, glyph, headingTick, hoverRing, strengthBar } from "../units/markers.js";
 import { FONT, FONT_SMALL, HALO, INK, INK_RGB, MID, MID_RGB, RED, RED_RGB, TEAL_RGB, rgba } from "../theme.js";
 
 const TRAIL_LENGTH = 24;
+const AIR_LIFT = 6;
+const ROUTE_STEP = 10;
+const HEADING_SPAN = 0.015;
 const FADE_TICKS = 8;
 const PICK_RADIUS = 14;
 const DIM = 0.4;
@@ -872,6 +876,11 @@ export class MapRenderer {
   drawShipment(P, view) {
     const ctx = this.ctx;
     const { a, b, item, progress, finished, fade, detailed } = view;
+    const legs = routeLegs(item);
+    if (legs) {
+      this.drawRoutedShipment(P, view, legs);
+      return;
+    }
     const distance = this.span(a, b);
     const air = item.mode === "Air";
     const naval = item.mode === "Naval";
@@ -914,6 +923,102 @@ export class MapRenderer {
     } else {
       glyph(ctx, "dot", p.x, p.y, 3, INK_RGB, 1);
     }
+    if (hovered) {
+      hoverRing(ctx, p.x, p.y, r);
+    }
+    ctx.globalAlpha = 1;
+    if (detailed || hovered) {
+      this.text(String(Math.round(item.cargo)), p.x + r + 5, p.y - 5, rgba(rgb, fade));
+    }
+    this.nextSlots.push({ type: "shipment", id: item.id, x: p.x, y: p.y, r, carrier });
+  }
+
+  liftOf(mode) {
+    return mode === "Air" ? AIR_LIFT : 0;
+  }
+
+  tracePath(P, path, z) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    subdivide(path, ROUTE_STEP).forEach((point, i) => {
+      const p = P(point.x, point.y, z);
+      if (i === 0) {
+        ctx.moveTo(p.x, p.y);
+      } else {
+        ctx.lineTo(p.x, p.y);
+      }
+    });
+  }
+
+  routeHeading(P, legs, progress) {
+    const before = positionAt(legs, Math.max(0, progress - HEADING_SPAN));
+    const after = positionAt(legs, Math.min(1, progress + HEADING_SPAN));
+    const heading = screenHeading(
+      P(before.x, before.y, this.liftOf(before.mode)),
+      P(after.x, after.y, this.liftOf(after.mode))
+    );
+    return heading === null ? 0 : heading;
+  }
+
+  drawHandOffs(P, legs, progress, fade) {
+    const ctx = this.ctx;
+    for (const stop of handOffs(legs)) {
+      const p = P(stop.x, stop.y, 0);
+      const passed = progress >= stop.at;
+      ctx.globalAlpha = fade;
+      backing(ctx, p.x, p.y, 5);
+      glyph(ctx, "handoff", p.x, p.y, 6, INK_RGB, passed ? 0.9 : 0.55);
+      if (passed) {
+        glyph(ctx, "dot", p.x, p.y, 1.6, INK_RGB, 0.9);
+      }
+      ctx.globalAlpha = 1;
+      this.present.add("marker:handoff");
+    }
+  }
+
+  drawRoutedShipment(P, view, legs) {
+    const ctx = this.ctx;
+    const { item, progress, finished, fade, detailed } = view;
+    const lost = item.status === "Intercepted";
+    const rgb = lost ? RED_RGB : INK_RGB;
+    ctx.lineJoin = "round";
+    if (!finished && progress < 1) {
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = rgba(INK_RGB, 0.14);
+      for (const segment of segmentsBetween(legs, progress, 1)) {
+        this.tracePath(P, segment.path, this.liftOf(segment.mode));
+        ctx.stroke();
+      }
+    }
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = rgba(rgb, 0.8 * fade);
+    for (const segment of segmentsBetween(legs, 0, progress)) {
+      ctx.setLineDash(DASH[segment.mode] || []);
+      this.tracePath(P, segment.path, this.liftOf(segment.mode));
+      ctx.stroke();
+      this.present.add(MODE_LINE[segment.mode] || "line:supply-ground");
+    }
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    this.drawHandOffs(P, legs, progress, fade);
+    const position = positionAt(legs, progress);
+    const p = P(position.x, position.y, this.liftOf(position.mode));
+    if (lost && finished) {
+      this.present.add("line:lost");
+      glyph(ctx, "cross", p.x, p.y, 5, RED_RGB, fade);
+      return;
+    }
+    const carrier = position.carrier;
+    const r = detailed ? COUNTRY_SYMBOL - 1 : WORLD_SYMBOL;
+    const hovered = this.hover && this.hover.type === "shipment" && this.hover.id === item.id;
+    ctx.globalAlpha = fade;
+    backing(ctx, p.x, p.y, r);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    drawSymbol(ctx, carrier, p.x, p.y, r, this.routeHeading(P, legs, progress));
+    ctx.lineWidth = 1;
+    this.present.add(`carrier:${symbolName(carrier)}`);
     if (hovered) {
       hoverRing(ctx, p.x, p.y, r);
     }

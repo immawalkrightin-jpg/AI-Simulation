@@ -15,6 +15,7 @@ The map is a showcase of an AI's decisions, observed by a human: understand the 
 - `js/maps/labels.js`: greedy label placement with eight offsets and fade with hysteresis. Pure.
 - `js/maps/cluster.js`: pixel-distance clustering and the spread layout. Pure.
 - `js/maps/motion.js`: carrier choice and headings. Pure.
+- `js/maps/route.js`: positions, slices, hand-offs and chains along an engine route. Pure, mirrors `ShipmentRoute.At` in the engine.
 - `js/maps/land.js`: builds the projected land paths. `js/maps/renderer.js`: canvas drawing, input and picking.
 - `js/units/symbols.js`: every silhouette, `drawSymbol`, and the `LEGEND` list. `js/units/markers.js`: flat glyphs, dash patterns, strength bar, cluster badge. `js/units/legend.js`: the symbol manual and the in-view legend, drawn with the same calls as the map.
 - `js/telemetry/`: `describe.js` (pure tooltip and dossier content), `dossier.js`, `inspector.js`, `hud.js` (HUD and event strip), `tooltip.js`, `dom.js`.
@@ -66,7 +67,7 @@ Bloc is shown by pattern, never by colour: East = fine diagonal hatch, West = do
 
 ### Carrier rule
 
-`InteractionDto` has an optional `Carrier` (`Truck`, `CargoShip`, `Transport`, `Helicopter`). The WorldEngine has no carrier concept, so `GroundTruthMapper.CarrierOf` derives it deterministically from `Mode` (Ground: Truck, Naval: CargoShip, Air: Transport). The frontend uses `item.carrier` when present, otherwise the same mode default, and never guesses a helicopter. The tooltip says "unknown" when a shipment has no carrier at all.
+`InteractionDto` has an optional `Carrier` and an optional `Route`. A route is a list of legs `{ carrier, mode, start, end, points }`; `start` and `end` are shares of the trip (the same progress the shipment bar uses, `(tick - startTick) / (dueTick - startTick)`), `points` is a flat `[x0, y0, x1, y1, ...]` polyline in engine space. The engine plans the route and decides the carrier of each leg (`Truck`, `CargoShip`, `CargoPlane`, `Helicopter`); `Carrier` is the carrier of the current leg. The frontend never plans or guesses: it draws the polyline (cut into 10-unit pieces so the display transform bends it like the engine's straight lines), draws each leg in the dash style of its mode, puts the symbol of the current leg's carrier on the shipment, and marks every hand-off with a ring. Without a route (an engine without territory) it falls back to the old arc between capitals and the mode default carrier (`GroundTruthMapper.CarrierOf`). It never invents a helicopter. The tooltip adds `Leg` and `Chain` rows when a route is present; the dossier shows the leg in the operation line.
 
 ## Manual, tooltips and panels
 
@@ -102,6 +103,7 @@ Standing relations are faint and ongoing operations are bright.
 | White solid line, truck head | Supply shipment, ground |
 | White dotted line, cargo ship head | Supply shipment, naval |
 | White long-dash arc, transport plane head | Supply shipment, air |
+| Ring with side ticks | Hand-off point: a dock or airfield where the carrier changes. Filled once passed |
 | Red line ending in a cross | Shipment intercepted or talks collapsed |
 | Red dashed lines converging on a pulsing bracket | Clash |
 | Red high arc with missile head | Missile in flight; ring on the target warns of arrival |
@@ -124,7 +126,7 @@ Open `http://localhost:5500`. The API address and key are in `js/config.js`. Tes
 ## Known limits
 
 - The engine has no terrain, so the map has none.
-- Supply and missile routes are straight arcs between capitals; the engine has no routing.
 - Event records carry no position, so events appear in the log only.
-- The engine has no installations (ports, bases, depots), so none are drawn. A possible additive `InstallationDto { Id, Owner, Kind, X, Y }` (kinds Command, Airbase, Port, Depot) is proposed but not implemented; the scenario's ports table would be its first source.
-- Shipment carriers are derived from the transport mode, not reported by the engine.
+- Routes are planned on the 2-unit territory raster. Straits the 110m map cannot resolve are cut through it for shipping only (Turkish Straits, Suez Canal and Red Sea, Panama).
+- Missile arcs and negotiation lines are still straight arcs between capitals.
+- Installations other than ports are not drawn. Hand-offs are the only port markers, and only while a shipment uses them.

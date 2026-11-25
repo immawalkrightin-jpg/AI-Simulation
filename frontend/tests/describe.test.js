@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocLabel, carrierLabel, dossierFor, kindLabel, percent, powerFor, routeText, tooltipFor } from "../js/telemetry/describe.js";
+import { blocLabel, carrierLabel, chainText, dossierFor, kindLabel, legText, percent, powerFor, routeText, tooltipFor } from "../js/telemetry/describe.js";
 
 const snapshot = {
   countries: [
@@ -134,4 +134,64 @@ test("power: an engine that does not report it gives null, never a guess", () =>
   assert.equal(powerFor(bare, "USSR"), null);
   assert.equal(dossierFor(bare, "USSR", new Map()).power, null);
   assert.equal(powerFor(snapshot, "XXX"), null);
+});
+
+const routed = {
+  ...snapshot,
+  tick: 150,
+  interactions: [
+    {
+      id: 8,
+      kind: "SupplyShipment",
+      source: "USSR",
+      target: "POL",
+      mode: "Naval",
+      status: "Active",
+      cargo: 50,
+      subject: "supplies",
+      startTick: 100,
+      dueTick: 200,
+      endTick: null,
+      carrier: "CargoShip",
+      route: {
+        exposure: 0,
+        legs: [
+          { carrier: "Truck", mode: "Ground", start: 0, end: 0.2, points: [0, 0, 10, 0] },
+          { carrier: "CargoShip", mode: "Naval", start: 0.2, end: 0.8, points: [10, 0, 40, 0] },
+          { carrier: "CargoPlane", mode: "Air", start: 0.8, end: 1, points: [40, 0, 60, 0] }
+        ]
+      }
+    }
+  ]
+};
+
+test("routes: the chain names every carrier in order", () => {
+  assert.equal(chainText(routed.interactions[0].route.legs), "Truck > Cargo ship > Cargo plane");
+  assert.equal(carrierLabel("CargoPlane"), "Cargo plane");
+});
+
+test("routes: the leg follows the tick, and freezes when the shipment has ended", () => {
+  assert.equal(legText(routed, routed.interactions[0]), "2 of 3");
+  assert.equal(legText({ ...routed, tick: 105 }, routed.interactions[0]), "1 of 3");
+  assert.equal(legText({ ...routed, tick: 300 }, routed.interactions[0]), "3 of 3");
+  assert.equal(legText({ ...routed, tick: 300 }, { ...routed.interactions[0], endTick: 150 }), "2 of 3");
+  assert.equal(legText(snapshot, snapshot.interactions[0]), null);
+});
+
+test("routes: the shipment tooltip adds the leg and the chain", () => {
+  const tip = tooltipFor(routed, { type: "shipment", id: 8, carrier: "CargoShip" });
+  assert.deepEqual(tip.rows, [
+    ["Carrier", "Cargo ship"],
+    ["Leg", "2 of 3"],
+    ["Chain", "Truck > Cargo ship > Cargo plane"],
+    ["Mode", "Naval"],
+    ["Cargo", "50"],
+    ["Route", "Soviet Union to Poland"],
+    ["Status", "Active"]
+  ]);
+});
+
+test("routes: the dossier shows which leg a shipment is on", () => {
+  const dossier = dossierFor(routed, "USSR", new Map());
+  assert.equal(dossier.operations[0].detail, "Cargo ship 50, leg 2 of 3");
 });

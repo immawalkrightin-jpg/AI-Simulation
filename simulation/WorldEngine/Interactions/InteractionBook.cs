@@ -1,4 +1,5 @@
 using WorldEngine.Countries;
+using WorldEngine.Routing;
 
 namespace WorldEngine.Interactions;
 
@@ -22,10 +23,11 @@ public sealed class InteractionBook
         long startTick,
         long dueTick,
         long resolveTick,
-        InteractionStatus plannedStatus)
+        InteractionStatus plannedStatus,
+        ShipmentRoute? route = null)
     {
         var interaction = new Interaction(
-            nextId++, kind, source, target, mode, cargo, subject, startTick, dueTick, resolveTick, plannedStatus);
+            nextId++, kind, source, target, mode, cargo, subject, startTick, dueTick, resolveTick, plannedStatus, route);
         items.Add(interaction);
         return interaction;
     }

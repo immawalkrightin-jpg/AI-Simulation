@@ -42,6 +42,17 @@ public sealed record EventDto(
     string Kind,
     string Description);
 
+public sealed record RouteLegDto(
+    string Carrier,
+    string Mode,
+    double Start,
+    double End,
+    IReadOnlyList<float> Points);
+
+public sealed record RouteDto(
+    int Exposure,
+    IReadOnlyList<RouteLegDto> Legs);
+
 public sealed record InteractionDto(
     int Id,
     string Kind,
@@ -54,7 +65,8 @@ public sealed record InteractionDto(
     long StartTick,
     long DueTick,
     long? EndTick,
-    string? Carrier = null);
+    string? Carrier = null,
+    RouteDto? Route = null);
 
 public sealed record GroundTruthSnapshot(
     long Tick,

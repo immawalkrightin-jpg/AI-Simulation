@@ -72,18 +72,20 @@ python -m http.server 5500
     - [x] Tests: power order, one domain per kind, legal start cells
     - [ ] Run `dotnet test` and `npm test` on the owner's machine
     - [ ] Manual check in the browser (new silhouette, dossier power section)
-16. Logistics routing, hand-offs and route rendering
-    - [ ] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
-    - [ ] Sea lane graph with chokepoints (Danish straits, GIUK, Bosporus, Gibraltar, Suez, Malacca, Panama, Cape)
-    - [ ] Land links between neighbouring countries
-    - [ ] Multi-leg shipments with hand-offs at ports and airfields
-    - [ ] Truck, helicopter or plane continues after a cargo ship, never a ship over land
-    - [ ] `Route` added to `InteractionDto`
-    - [ ] Validate sea legs on water and land legs on land
-    - [ ] Shipments follow the engine route in the frontend
-    - [ ] Carrier changes at each hand-off, hand-off symbol, legend rows
-    - [ ] Tooltip and dossier show current leg and chain
-    - [ ] Tests: routes, hand-offs, bare worlds still work
+16. Logistics routing, hand-offs and route rendering (in review)
+    - [x] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
+    - [x] Sea routes over the raster with shipping canal cuts (Turkish Straits, Suez, Red Sea, Panama)
+    - [x] Land links between neighbouring countries
+    - [x] Multi-leg shipments with hand-offs at ports
+    - [x] Truck, helicopter or plane continues after a cargo ship, never a ship over land
+    - [x] `Route` added to `InteractionDto`
+    - [x] Validate sea legs on water and land legs on land
+    - [x] Shipments follow the engine route in the frontend
+    - [x] Carrier changes at each hand-off, hand-off symbol, legend rows
+    - [x] Tooltip and dossier show current leg and chain
+    - [x] Tests: routes, hand-offs, bare worlds still work
+    - [ ] Run `dotnet test` and `npm test` on the owner's machine
+    - [ ] Manual check in the browser (route lines, hand-off rings, carrier change)
 17. Cold War political logic and hunting of shipments
     - [ ] Doctrine object supplied by the scenario
     - [ ] Patron-to-client supply flows inside each bloc

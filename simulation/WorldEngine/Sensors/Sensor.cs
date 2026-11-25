@@ -94,9 +94,13 @@ public sealed class Sensor
         return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
     }
 
+    private static readonly UnitKind[] ReportableKinds = Enum.GetValues<UnitKind>()
+        .Where(k => k is not (UnitKind.Armor or UnitKind.Naval or UnitKind.Air or UnitKind.SupplyConvoy))
+        .ToArray();
+
     private static UnitKind RandomOtherKind(UnitKind actual, Random rng)
     {
-        var kinds = Enum.GetValues<UnitKind>().Where(k => k != actual).ToArray();
+        var kinds = ReportableKinds.Where(k => k != actual).ToArray();
         return kinds[rng.Next(kinds.Length)];
     }
 }

@@ -1,6 +1,7 @@
 using System.Numerics;
 using WorldEngine.Countries;
 using WorldEngine.Interactions;
+using WorldEngine.Routing;
 using WorldEngine.Sensors;
 using WorldEngine.Territory;
 using WorldEngine.Units;
@@ -76,6 +77,76 @@ public static class DefaultScenario
         ["EGY"] = (32.3, 31.25), ["BRA"] = (-43.2, -22.9), ["POL"] = (18.6, 54.55), ["ROU"] = (28.65, 44.15),
         ["BGR"] = (27.9, 43.2)
     };
+
+    // Every harbour that ships from or to a country. Berths snap to the nearest sea cell; a harbour that
+    // cannot be snapped is skipped.
+    private static readonly (string Owner, string Name, double Longitude, double Latitude)[] PortSites =
+    {
+        ("USSR", "Murmansk", 33.1, 69.3), ("USSR", "Baltiysk", 20.0, 54.65),
+        ("USSR", "Sevastopol", 33.5, 44.6), ("USSR", "Vladivostok", 131.9, 43.1),
+        ("USA", "Norfolk", -76.0, 36.9), ("USA", "San Diego", -117.2, 32.7),
+        ("CAN", "Halifax", -63.6, 44.6), ("CAN", "Vancouver", -123.1, 49.3),
+        ("GBR", "Plymouth", -4.2, 50.35),
+        ("FRA", "Brest", -4.5, 48.4), ("FRA", "Toulon", 5.9, 43.1),
+        ("FRG", "Kiel", 10.1, 54.35),
+        ("ITA", "Naples", 14.2, 40.8),
+        ("TUR", "Istanbul", 29.0, 41.0), ("TUR", "Izmir", 27.1, 38.4),
+        ("JPN", "Yokosuka", 139.6, 35.3), ("JPN", "Sasebo", 129.7, 33.2),
+        ("KOR", "Busan", 129.0, 35.1),
+        ("AUS", "Sydney", 151.2, -33.9), ("AUS", "Fremantle", 115.7, -32.1),
+        ("PRC", "Shanghai", 121.5, 31.2), ("PRC", "Guangzhou", 113.6, 22.3),
+        ("PRK", "Wonsan", 127.6, 39.3),
+        ("VNM", "Haiphong", 106.8, 20.8),
+        ("CUB", "Havana", -82.3, 23.2),
+        ("IND", "Mumbai", 72.8, 18.9), ("IND", "Kolkata", 88.3, 22.5),
+        ("EGY", "Port Said", 32.3, 31.25),
+        ("BRA", "Rio de Janeiro", -43.2, -22.9),
+        ("POL", "Gdynia", 18.6, 54.55),
+        ("ROU", "Constanta", 28.65, 44.15),
+        ("BGR", "Varna", 27.9, 43.2)
+    };
+
+    // Passages the 110m map cannot resolve. They are cut through the raster for shipping only.
+    private static readonly (string Name, double FromLon, double FromLat, double ToLon, double ToLat)[] CanalSites =
+    {
+        ("Turkish Straits", 26.82, 40.7, 26.82, 40.3),
+        ("Suez Canal", 32.30, 31.3, 32.58, 29.4),
+        ("Gulf of Suez", 32.58, 29.4, 32.94, 28.6),
+        ("Red Sea north", 32.94, 28.6, 34.5, 26.0),
+        ("Red Sea middle", 34.5, 26.0, 36.0, 23.5),
+        ("Red Sea south", 36.0, 23.5, 38.0, 20.0),
+        ("Panama Canal", -79.38, 9.7, -79.38, 7.4)
+    };
+
+    // The network only depends on the map, so every scenario build shares one (and its path cache).
+    private static readonly Lazy<RouteNetwork?> SharedRoutes = new(BuildRoutes);
+
+    private static RouteNetwork? BuildRoutes()
+    {
+        var territory = TerritoryLoader.Shared;
+        if (territory is null)
+        {
+            return null;
+        }
+        var ports = new List<Port>();
+        var counts = new Dictionary<string, int>();
+        foreach (var (ownerId, name, longitude, latitude) in PortSites)
+        {
+            var owner = new CountryId(ownerId);
+            var berth = SeaBerth(territory, owner, Place(longitude, latitude));
+            if (berth is null)
+            {
+                continue;
+            }
+            counts.TryGetValue(ownerId, out var count);
+            counts[ownerId] = count + 1;
+            ports.Add(new Port($"{ownerId}-{count + 1}", owner, name, berth.Value));
+        }
+        var canals = CanalSites
+            .Select(c => new Canal(c.Name, Place(c.FromLon, c.FromLat), Place(c.ToLon, c.ToLat)))
+            .ToList();
+        return new RouteNetwork(territory, ports, canals);
+    }
 
     private static readonly (string, string, double)[] RelationOverrides =
     {
@@ -285,6 +356,7 @@ public static class DefaultScenario
             }
         }
         var soviet = new CountryId(ModelId);
+        world.Routes = territory is null ? null : SharedRoutes.Value;
         var pacificBase = Place(131.9, 43.1);
         world.AddUnit(soviet, UnitKind.Warship, SeaBerth(territory, soviet, pacificBase) ?? pacificBase);
 

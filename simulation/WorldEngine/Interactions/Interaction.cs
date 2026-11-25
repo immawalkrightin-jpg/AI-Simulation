@@ -1,4 +1,5 @@
 using WorldEngine.Countries;
+using WorldEngine.Routing;
 
 namespace WorldEngine.Interactions;
 
@@ -40,6 +41,7 @@ public sealed class Interaction
     public long DueTick { get; }
     public long ResolveTick { get; }
     public InteractionStatus PlannedStatus { get; }
+    public ShipmentRoute? Route { get; }
     public InteractionStatus Status { get; private set; } = InteractionStatus.Active;
     public long? EndTick { get; private set; }
 
@@ -54,7 +56,8 @@ public sealed class Interaction
         long startTick,
         long dueTick,
         long resolveTick,
-        InteractionStatus plannedStatus)
+        InteractionStatus plannedStatus,
+        ShipmentRoute? route = null)
     {
         Id = id;
         Kind = kind;
@@ -67,11 +70,19 @@ public sealed class Interaction
         DueTick = Math.Max(startTick + 1, dueTick);
         ResolveTick = resolveTick;
         PlannedStatus = plannedStatus;
+        Route = route;
     }
 
     public void Complete(long tick)
     {
         Status = PlannedStatus;
         EndTick = tick;
+    }
+
+    public double ProgressAt(long tick)
+    {
+        var reference = EndTick ?? tick;
+        var span = Math.Max(1, DueTick - StartTick);
+        return Math.Clamp((reference - StartTick) / (double)span, 0.0, 1.0);
     }
 }

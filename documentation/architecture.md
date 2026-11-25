@@ -38,3 +38,7 @@ Observations are drained from the sensor network once per tick, sequenced, kept 
 ## Interactions
 
 `WorldEngine/Interactions` spawns and resolves four kinds of operation between countries: negotiation, supply shipment (ground, naval or air), clash and missile strike. Each carries a start tick, a due tick and a planned outcome fixed at spawn from the seeded generator, so history is reproducible. Outcomes move relations, supplies, ammunition and unit strength, and relations drift back toward their starting values so the world does not collapse into permanent war. Finished operations stay visible for a fade window and are then pruned.
+
+## Routing
+
+`WorldEngine/Routing` plans supply shipments over the territory raster. `RouteNetwork` holds the ports (each snapped to a water cell beside its owner's land), a few shipping-only canal cuts and an A* planner for three media: sea (ships), land (trucks, with a surcharge on foreign land) and air (cargo planes and helicopters). Land of countries hostile to the sender or the receiver is never crossed. A naval shipment is a `ShipmentRoute` of legs: truck to the dock, cargo ship through the sea, then truck onward, or a helicopter when the capital has no land link to its port. `PlanBest` tries the preferred mode, then the others. Results are cached per (medium, start, goal, owners, hostile set). Worlds without a territory or a network (`WorldState.Routes` null) keep direct capital-to-capital shipments. The route is part of the ground-truth contract (`InteractionDto.Route`); the frontend only draws it.

@@ -21,7 +21,7 @@ export const DASH = {
   Foreign: [3, 3]
 };
 
-// Flat markers: diamond, hollow, cross, bracket, dot. The caller sets the dash.
+// Flat markers: diamond, hollow, cross, bracket, handoff, dot. The caller sets the dash.
 export function glyph(ctx, shape, x, y, r, rgb, alpha) {
   ctx.strokeStyle = rgba(rgb, alpha);
   ctx.fillStyle = rgba(rgb, alpha);
@@ -46,6 +46,14 @@ export function glyph(ctx, shape, x, y, r, rgb, alpha) {
       ctx.lineTo(x + r, y + r);
       ctx.moveTo(x + r, y - r);
       ctx.lineTo(x - r, y + r);
+      ctx.stroke();
+      break;
+    case "handoff":
+      ctx.arc(x, y, r * 0.62, 0, Math.PI * 2);
+      ctx.moveTo(x - r, y);
+      ctx.lineTo(x - r * 0.62, y);
+      ctx.moveTo(x + r * 0.62, y);
+      ctx.lineTo(x + r, y);
       ctx.stroke();
       break;
     case "bracket": {

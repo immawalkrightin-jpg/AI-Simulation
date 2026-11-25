@@ -23,7 +23,7 @@ public class CarrierAndSpacingTests
     }
 
     [Fact]
-    public void SnapshotShipmentsCarryTheCarrierOfTheirMode()
+    public void SnapshotShipmentsCarryTheCarrierOfTheirCurrentLeg()
     {
         var simulation = DefaultScenario.Build(42);
         var seen = new HashSet<string>();
@@ -34,14 +34,21 @@ public class CarrierAndSpacingTests
             {
                 if (item.Kind == "SupplyShipment")
                 {
-                    var expected = item.Mode switch
+                    if (item.Route is null)
                     {
-                        "Ground" => "Truck",
-                        "Naval" => "CargoShip",
-                        "Air" => "Transport",
-                        _ => null
-                    };
-                    Assert.Equal(expected, item.Carrier);
+                        var expected = item.Mode switch
+                        {
+                            "Ground" => "Truck",
+                            "Naval" => "CargoShip",
+                            "Air" => "Transport",
+                            _ => null
+                        };
+                        Assert.Equal(expected, item.Carrier);
+                    }
+                    else
+                    {
+                        Assert.Contains(item.Route.Legs, l => l.Carrier == item.Carrier);
+                    }
                     seen.Add(item.Mode);
                 }
                 else

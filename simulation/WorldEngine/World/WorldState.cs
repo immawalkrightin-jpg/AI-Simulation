@@ -3,6 +3,7 @@ using WorldEngine.Countries;
 using WorldEngine.Diplomacy;
 using WorldEngine.Events;
 using WorldEngine.Interactions;
+using WorldEngine.Routing;
 using WorldEngine.SimulationClock;
 using WorldEngine.Territory;
 using WorldEngine.Units;
@@ -22,6 +23,7 @@ public sealed class WorldState
     public InteractionBook Interactions { get; } = new();
     public CountryId? ModelCountry { get; set; }
     public TerritoryMap? Territory { get; set; }
+    public RouteNetwork? Routes { get; set; }
     public Random Rng { get; }
     public float Width { get; }
     public float Height { get; }
