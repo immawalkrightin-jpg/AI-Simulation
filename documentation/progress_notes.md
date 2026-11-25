@@ -76,7 +76,6 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Frontend: `maps/route.js` (pure), shipments follow the engine polyline, each leg in the dash of its mode, carrier symbol changes at each hand-off, hand-off ring (`handoff` glyph, manual row `marker:handoff`), tooltip Leg and Chain rows, dossier leg text.
 - Polish: `Sensor.RandomOtherKind` no longer misclassifies into the legacy kinds. Comments removed from the routing files; Cuba's capital in the sea is handled by the anchor lookup.
 - Tests: `RoutingTests.cs` (synthetic maps: truck, ship, truck; helicopter for an unlinked capital; hostile wall; no-port country; determinism; real map: ports beside land, four Soviet seas, ocean connectivity through the chokepoints, every planned route legal, running world, snapshot route and carrier parity, bare worlds). `CarrierAndSpacingTests` updated. Frontend: `route.test.js`, new cases in `describe.test.js` and `symbols.test.js`.
-- NOT verified here: nothing was compiled or run (no copy of the project was made, per the working rule). Run `dotnet test` and `npm test`, then look at a shipment in the browser. The ocean connectivity theory cases are the first thing to read if anything fails: they depend on the real raster.
 
 ## Milestone 17: Cold War political logic and hunting of shipments (written; in review)
 - Doctrine (`Diplomacy/Doctrine.cs`): `AidTie` (patron to client, with a reason), `ProxyFront` (name, pair, start rung, ceiling rung, reason), `SummitTie`, and forbidden pairs. Supplied by the scenario through `WorldState.Doctrine`. `MayFight` is false for forbidden pairs and for pairs with no front.
@@ -93,7 +92,6 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Contract (additive): `InteractionDto.Cause` and `Hunter`, `GroundTruthSnapshot.Fronts` (`FrontDto`).
 - Frontend: shipment tooltip rows `Cause` and `Hunted by` (only when sent), dossier detail "hunted by", dossier Fronts section (`frontsFor`, `rungLabel`).
 - Tests: `DoctrineTests.cs` (lookups, ladder climb, ceiling, cooling, ceasefire, no front no war, forbidden pairs, causes, aid-only shipments, summits, bare worlds unchanged, hunting on a synthetic corridor, peaceful transit never intercepted, no interceptors no catch, waters, planning around hostile waters, default doctrine validity, long run on seeds 42 and 7). Frontend: `describe.test.js`.
-- NOT verified here: nothing was compiled or run (no copy of the project was made, per the working rule). Run `dotnet test` and `npm test`, then open a country in the browser. Watch these first if something fails: `ScenarioTests.LongRunProducesEveryKindOfInteraction` (needs a clash and a missile within 2000 ticks on seed 42), `RoutingTests.EveryPlannedRouteOnTheRealMapIsLegal` (hostile waters now remove some ship routes, it needs 60 routes and 20 ship legs), and the hunting tests, which rely on chances in `InteractionEngine`.
 - Known limits: waters are a coarse band, not real territorial seas. Interceptors are ordered to move but do not fight a visible battle. A shipment that runs the gauntlet is only tracked, never warned off by diplomacy.
 
 ## Milestone 18: ambush, conquest, paralyzed zones and secondary explosions (written; in review)
@@ -106,7 +104,7 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Frontend: `drawZones` and `drawOccupations` in `maps/renderer.js` (red dashed ring with a cross whose fill fades as repairs go on, white dashed ring with a bracket and the holder's code), hover and tooltip rows, dotted outline for a unit in ambush, manual rows `marker:ambush`, `area:zone`, `area:occupation`. New in this pass: dossier sections Paralyzed ground and Occupied ground (only when there is something to show), an "in ambush" count in the dossier unit lines, and frontline events (`ambush_sprung`, `territory_seized`, `zone_paralyzed`, `secondary_explosion`) marked as hostile in the event strip.
 - Polish: hidden and destroyed unit outlines were dashed with `ctx.setLineDash` before `drawSymbol`, which scales the context, so the dashes came out about `r` times too long. They now go through the `dash` argument of `drawSymbol`, which divides them back to pixels, on the map and in the manual.
 - Tests: `FrontlineTests.cs` (zone severity and repair, blocking, ownership change, garrison, income, hand-back, determinism, ambush on units and convoys, peaceful neighbours, secondary blast, default-world invariants on seeds 42 and 7) plus three new snapshot tests (zones and occupations mapped, empty lists on a bare world, ambushing status mapped) and two array checks in `ApiTests`. Frontend: `describe.test.js` (zones, occupations, tooltips, ambush counts), `hud.test.js` (frontline events), `symbols.test.js` (manual rows).
-- NOT verified here: nothing was compiled or run (the tools in this session can read and write files but not run `dotnet`, `node` or a browser). Run `dotnet test` and `npm test`, then look at a hot front in the browser. Watch these first if something fails: `FrontlineTests.TroopsTakeCoverInsideTheirBorderOnAHotFront` (needs a post reached within 58 ticks), `FrontlineTests.AHiddenUnitSpringsOnAHostileConvoyThatDrivesPast` (relies on chances along a 750-step run), `FrontlineTests.OccupationCutsTheLosersIncome` (assumes exactly one income step in 10 ticks) and the new `TheSnapshotCarriesLiveZonesAndOccupations`.
+- 3 FAILS IN THE .NET
 - Known limits: the evaluator still counts a hidden unit as detectable whenever it sits in sensor range, so recall is a little harsher than the sensors are; waters and zones are circles, not shapes that follow coastlines; a garrison does not fight a visible battle.
 
 ## Window A roadmap (milestones 15 to 19, one per push)
@@ -117,7 +115,5 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - 19 randomized worlds and the Window A verification pass: seeded variation of powers, relations and positions so the model faces new environments.
 
 ## Still open
-- Run `dotnet test` and `npm test` (frontend) on milestone 18, then look at a hot front in the browser (paralyzed ring, occupied ring, dotted ambush outlines, the two new dossier sections).
-- README milestone list is old; `documentation/architecture.md` and `documentation/ai_agent.md` are not updated.
 - Window B has no HTML page and ignores the reset event.
 - Reward function: the evaluator (milestone 13) scores tracking only. Reward design and the learning loop come after Window A is finished.
