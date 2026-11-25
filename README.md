@@ -46,7 +46,7 @@ python -m http.server 5500
     - [x] Run C# and Python tests
 12. Terminal UI
     - [x] Report parser, API link, report dialog and history
-    - [ ] Manual check in the browser
+    - [ ] Manual check in the browser (Didn't make a proper trigger for it yet..)
 13. Ground-truth evaluator
     - [x] Scoring of the AI's tracks against real units
     - [x] Version evaluation over a list of seeds
@@ -71,7 +71,6 @@ python -m http.server 5500
     - [x] Frontend symbols, manual and legend rows for the new kinds
     - [x] Tests: power order, one domain per kind, legal start cells
     - [ ] Run `dotnet test` and `npm test`
-    - [ ] Manual check in the browser (new silhouette, dossier power section)
 16. Logistics routing, hand-offs and route rendering (in review)
     - [x] Ports per country (Soviet Union: Arctic, Baltic, Black Sea, Pacific)
     - [x] Sea routes over the raster with shipping canal cuts (Turkish Straits, Suez, Red Sea, Panama)
@@ -85,7 +84,7 @@ python -m http.server 5500
     - [x] Tooltip and dossier show current leg and chain
     - [x] Tests: routes, hand-offs, bare worlds still work
     - [ ] Run `dotnet test` and `npm test`
-    - [ ] Manual check in the browser (route lines, hand-off rings, carrier change)
+    - [x] Manual check in the browser (route lines, hand-off rings, carrier change)
 17. Cold War political logic and hunting of shipments
     - [ ] Doctrine object supplied by the scenario
     - [ ] Patron-to-client supply flows inside each bloc
