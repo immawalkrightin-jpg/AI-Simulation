@@ -138,6 +138,7 @@ Open `http://localhost:5500`. The API address and key are in `js/config.js`. Tes
 ## Known limits
 
 - The engine has no terrain, so the map has none.
+- Window A draws whatever world the server holds. Seed 42 is the historical set-up; resetting with another seed (`POST /api/simulation/reset?seed=N`) shows a variation with other stockpiles, forces, relations and positions. The frontend has no seed control yet.
 - Event records carry no position, so events appear in the log only.
 - Routes are planned on the 2-unit territory raster. Straits the 110m map cannot resolve are cut through it for shipping only (Turkish Straits, Suez Canal and Red Sea, Panama).
 - Missile arcs and negotiation lines are still straight arcs between capitals.

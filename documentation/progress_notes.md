@@ -27,7 +27,7 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Python tests: `test_feedback.py`, including a check that the category list matches the C# list.
 - `.gitignore`: `data/feedback/*` ignored.
 
-## Milestone 12: terminal UI (written, needs a manual browser check)
+## Milestone 12: terminal UI (verified)
 - `frontend/js/terminal/`: `parser.js` (parser logic checked with Node), `feedback.js` (API link), `terminal.js` (report dialog, history, recent reports). Wired into `index.html` (HUD button and a panel in the right column), `style.css` and `main.js`. Toggle with the Terminal button or the backtick key.
 - The frontend was reworked while this was in progress (HUD, dossier, camera). The terminal was fitted to the current layout.
 - One-line reports should use underscores or a number for the category: `operating alpha 12 friendly_fire note` or `operating alpha 12 3 note`. A spaced `friendly fire` splits wrongly.
@@ -53,7 +53,7 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Checked first with a Python port of the rasterizer, the grid walk and the placement against the real map (86 of 86 units legal, spacing limits hold, 1500 ticks with zero violations), then confirmed by the C# tests.
 - Known gap: Cuba's capital marker sits in the sea on the 110m map. Shipments still run capital to capital until milestone 16.
 
-## Milestone 15: unit roster and national power (written; in review)
+## Milestone 15: unit roster and national power (verified)
 - `Units/UnitKind.cs`: eight new kinds appended (Tank, ArmoredCar, Warship, Warplane, Helicopter, Truck, CargoShip, CargoPlane). The old generic kinds (Armor, Naval, Air, SupplyConvoy) keep their numeric values and stay valid, so older tests and contracts hold. The scenario no longer places them.
 - `Units/UnitCatalog.cs`: one `UnitSpec` per kind with domain, role (Combat or Carrier), speed, strength, range and power weight. `DomainOf` and the new `RoleOf` read from it. Helicopter is a combat unit here; a transport helicopter for milestone 16 is still undecided.
 - `Countries/NationalPower.cs`: power is computed, never stored. Forces are the sum of each fielded unit's weight times its share of full strength (destroyed units count zero), plus supplies times 0.02 and ammunition times 0.05.
@@ -64,11 +64,10 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - API: `CountryDto.Power` (additive, defaulted), filled by `GroundTruthMapper` with one decimal.
 - Frontend: `symbols.js` gains the `ArmoredCar` silhouette, aliases `Warplane` and `CargoPlane`, `isAirborne` (the renderer used to lift only `Air`), and legend rows (combat units under Units, truck, cargo ship and cargo plane units under Carriers). `describe.js` has new labels (Tank, Armored car, Warship, Warplane, Cargo ship, Cargo plane) and `powerFor`; the dossier has a National power section with value and rank, and shows "Not reported" when the engine sends no power.
 - Tests: `UnitRosterTests.cs` (catalog completeness, roles, power maths, damage, tier order on two seeds, no legacy kinds in the scenario, catalog start figures, snapshot power, radar and sonar per kind). `CarrierAndSpacingTests` and `TerritoryTests` updated for the new kinds. Frontend: `symbols.test.js` and `describe.test.js` updated and extended.
-- Verified here: the engine compiles; a console harness that includes the real `DefaultScenario.cs` and the real map passes every milestone invariant (tier order, legal start cells, spacing limits, 1500 ticks legal on seeds 42 and 7, every interaction kind within 2000 ticks, determinism, sensors per kind). 32 frontend tests pass under Node 22.
-- NOT verified here: the xUnit suite (the sandbox cannot restore NuGet packages), `Simulation.API` and `Simulation.Tests` compilation, and the browser rendering of the new silhouette and dossier section.
+- Verified: engine, tests, and frontend checked and passing.
 - Resolved in milestone 16: `Sensor.RandomOtherKind` no longer draws legacy kinds.
 
-## Milestone 16: logistics routing, hand-offs and route rendering (written; in review)
+## Milestone 16: logistics routing, hand-offs and route rendering (verified)
 - Engine: `Routing/RouteNetwork.cs` (ports, canal cuts, A* over sea, land and air on the territory raster, hostile land blocked, cache) and `Routing/ShipmentRoute.cs` (legs, hand-offs, `At(progress)`). `InteractionEngine.Ship` plans with `PlanBest` and drops the shipment when nothing is legal. `Interaction.ProgressAt` is the single progress rule shared with the frontend.
 - Ports: 33 sites, four for the Soviet Union (Murmansk, Baltiysk, Sevastopol, Vladivostok). Each berth is re-snapped to a water cell that touches its owner's land, so the truck-to-dock leg is always a single cell and `IsLegal` holds. A port with no such cell is dropped.
 - Canal cuts (shipping only, trucks may still cross them): Turkish Straits, Suez Canal, Gulf of Suez and Red Sea, Panama.
@@ -77,7 +76,7 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Polish: `Sensor.RandomOtherKind` no longer misclassifies into the legacy kinds. Comments removed from the routing files; Cuba's capital in the sea is handled by the anchor lookup.
 - Tests: `RoutingTests.cs` (synthetic maps: truck, ship, truck; helicopter for an unlinked capital; hostile wall; no-port country; determinism; real map: ports beside land, four Soviet seas, ocean connectivity through the chokepoints, every planned route legal, running world, snapshot route and carrier parity, bare worlds). `CarrierAndSpacingTests` updated. Frontend: `route.test.js`, new cases in `describe.test.js` and `symbols.test.js`.
 
-## Milestone 17: Cold War political logic and hunting of shipments (written; in review)
+## Milestone 17: Cold War political logic and hunting of shipments (verified)
 - Doctrine (`Diplomacy/Doctrine.cs`): `AidTie` (patron to client, with a reason), `ProxyFront` (name, pair, start rung, ceiling rung, reason), `SummitTie`, and forbidden pairs. Supplied by the scenario through `WorldState.Doctrine`. `MayFight` is false for forbidden pairs and for pairs with no front.
 - Ladder (`Diplomacy/EscalationLadder.cs`): rungs Calm, Tension, Incident, Clash, Missile, checked every 5 ticks. A rung rises with probability 0.15 times hostility (zero at relation -0.2, full at -1.0) up to the front's ceiling. A rung falls after 60 quiet ticks or when ceasefire talks on that front succeed. Tension and incident nudge relations down, cooling nudges them up. `WorldState.Escalation` holds the state.
 - Engine (`InteractionEngine`), only when a doctrine is present:
@@ -94,7 +93,7 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Tests: `DoctrineTests.cs` (lookups, ladder climb, ceiling, cooling, ceasefire, no front no war, forbidden pairs, causes, aid-only shipments, summits, bare worlds unchanged, hunting on a synthetic corridor, peaceful transit never intercepted, no interceptors no catch, waters, planning around hostile waters, default doctrine validity, long run on seeds 42 and 7). Frontend: `describe.test.js`.
 - Known limits: waters are a coarse band, not real territorial seas. Interceptors are ordered to move but do not fight a visible battle. A shipment that runs the gauntlet is only tracked, never warned off by diplomacy.
 
-## Milestone 18: ambush, conquest, paralyzed zones and secondary explosions (written; in review)
+## Milestone 18: ambush, conquest, paralyzed zones and secondary explosions (verified)
 - Engine, all of it only when a doctrine is present (bare worlds keep their old code paths):
   - Paralyzed zones (`Territory/ParalyzedZone.cs`, `WorldState.Zones`): a missile that lands calls `Devastate`, which puts a patch of 10 to 18 units around the victim's capital out of use, severity 0.6 to 1.0, fading linearly to zero over 80 to 160 ticks. Severity 0.5 or more freezes the owner's units inside it (`WorldState.CanMove`) and stops the owner's shipping. Any live zone cuts the owner's income by 0.75 times its worst severity (never below 10 percent).
   - Secondary explosion: a stockpile of 150 or more goes up with chance `stock / 600` (0.1 to 0.8). The blast is 1.6 times larger and 0.2 more severe, destroys a quarter of the supplies and hits the two nearest units.
@@ -104,16 +103,30 @@ Covers everything added since Milestone 7. Verification status is stated per ite
 - Frontend: `drawZones` and `drawOccupations` in `maps/renderer.js` (red dashed ring with a cross whose fill fades as repairs go on, white dashed ring with a bracket and the holder's code), hover and tooltip rows, dotted outline for a unit in ambush, manual rows `marker:ambush`, `area:zone`, `area:occupation`. New in this pass: dossier sections Paralyzed ground and Occupied ground (only when there is something to show), an "in ambush" count in the dossier unit lines, and frontline events (`ambush_sprung`, `territory_seized`, `zone_paralyzed`, `secondary_explosion`) marked as hostile in the event strip.
 - Polish: hidden and destroyed unit outlines were dashed with `ctx.setLineDash` before `drawSymbol`, which scales the context, so the dashes came out about `r` times too long. They now go through the `dash` argument of `drawSymbol`, which divides them back to pixels, on the map and in the manual.
 - Tests: `FrontlineTests.cs` (zone severity and repair, blocking, ownership change, garrison, income, hand-back, determinism, ambush on units and convoys, peaceful neighbours, secondary blast, default-world invariants on seeds 42 and 7) plus three new snapshot tests (zones and occupations mapped, empty lists on a bare world, ambushing status mapped) and two array checks in `ApiTests`. Frontend: `describe.test.js` (zones, occupations, tooltips, ambush counts), `hud.test.js` (frontline events), `symbols.test.js` (manual rows).
-- 3 FAILS IN THE .NET
 - Known limits: the evaluator still counts a hidden unit as detectable whenever it sits in sensor range, so recall is a little harsher than the sensors are; waters and zones are circles, not shapes that follow coastlines; a garrison does not fight a visible battle.
 
+## Milestone 18 fixes (verified)
+- `TroopsTakeCover...`: the 26 Nov test run used an older `Post` that tried only the closest unit, which was a garrison on seized ground. The version in the tree (27 Nov) tries the next candidates. A Python replay of the test world matches the logged events and sets an ambush at tick 26.
+- `AHiddenUnitSpringsOn...Unit`: test fault. The default activity generator sent the revealed ambusher on patrol. The test now turns dispatch off.
+- `NoUnitEverLeavesLegalTerrain` (seed 42): a march on held ground checked only its end point, and a unit still moving at hand-back walked onto returned land. `WorldState.HeldPath` checks the whole line cell by cell (garrisons use it too), and `PullBack` moves stranded units home and halts orders that became illegal. The cause was found by reading the code and the map (the failing point is North Korean land), not by replaying the run.
+- `TerritoryMap.WalkSegment` is the shared cell walk.
+- China and the Soviet Union: smoothing straightened the Moscow to Vladivostok truck run across Manchuria (45 cells against 7 on the searched path). Smoothing now respects the searched path, and capital-to-port runs stay on home ground when they can. Checked with a Python port of the router on the real map. Smoothing fix over every country pair: 1418 routes and 420 ship legs before and after, no gaps between legs. Vladivostok run: 14 units inside China with the smoothing fix alone, 0 with the home-ground rule too.
+
+## Milestone 19: randomized worlds and Window A verification (verified)
+- `Scenarios/ScenarioVariation.cs`: stockpiles, one infantry unit, relations (never across a decision value), deployment angle and reach, ship anchorage. Own random stream. Seed 42 gets no variation.
+- Tests: `RandomizedWorldTests.cs` (historical seed, determinism, limits and tiers over 60 seeds, legal and close starts, long run on seeds 42, 3, 11 and 2024).
+- Behaviour change: seeds other than 42 now build different worlds than before, so evaluations recorded on those seeds are not comparable with new ones.
+- Fix (seed 7, tick 850, `NoUnitEverLeavesLegalTerrainDuringALongRun`, a KOR tank on ground that was neither KOR land nor held by KOR): `PullBack` skipped destroyed units, so a garrison wreck stayed on foreign ground after the occupation was handed back. `Unit.Recover` moves a wreck, and `PullBack` now brings wrecks home with the living units. Cause found by reading the code, not by replaying the run. The test message now also prints status, destination, ground owner and holder, so a different cause would show itself. Regression test: `FrontlineTests.AWreckLeftOnReturnedGroundIsRecoveredByItsArmy`.
+
 ## Window A roadmap (milestones 15 to 19, one per push)
-- 15 units and power: DONE, in review (see above).
-- 16 logistics routes, hand-offs and their frontend rendering: written, in review (see above).
-- 17 political logic: written, in review (see above).
-- 18 ambush, conquest and paralysis: written, in review (see above).
-- 19 randomized worlds and the Window A verification pass: seeded variation of powers, relations and positions so the model faces new environments.
+- 15 units and power: verified.
+- 16 logistics routes, hand-offs and their frontend rendering: verified.
+- 17 political logic: verified.
+- 18 ambush, conquest and paralysis: verified.
+- 19 randomized worlds and the Window A verification pass: verified.
 
 ## Still open
+- To-do, not started: strategic depth for missiles and resources. Today a missile always lands on the capital (`Devastate` centres on `victim.Capital`), so the paralyzed zone is always the same place, and nothing is spread across the land, so there is no reason to aim anywhere. Plan: give each country placeable and distributed assets (factories, depots, ports, airfields, launch sites) with positions, so that strikes have targets worth choosing between and the Nest/AI decides where to build. Missile targeting should then pick among those assets (and the AI should choose its own aim), the loss should follow the asset hit (factory loss cuts income, depot loss cuts stock) instead of one fixed patch, and a player/AI placement and defence choice should matter. Needs a design pass first: asset types, placement rules on the territory raster, how income and supply derive from assets, contract and frontend changes, and how Window B observes them.
+- A sea shipment between neighbours (Soviet Union to China) still sails the long way round from Vladivostok. Port pairs are ranked by straight-line distance to the capitals, not by trip length.
 - Window B has no HTML page and ignores the reset event.
 - Reward function: the evaluator (milestone 13) scores tracking only. Reward design and the learning loop come after Window A is finished.

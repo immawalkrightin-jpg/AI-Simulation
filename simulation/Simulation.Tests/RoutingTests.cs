@@ -175,6 +175,61 @@ public class RoutingTests
         Assert.False(wall.Network.IsLegal(route, wall.Source, wall.Target, wall.Countries, id => id == C));
     }
 
+    private static double LengthInside(TerritoryMap map, RouteLeg leg, CountryId country)
+    {
+        var total = 0.0;
+        for (var i = 1; i < leg.Points.Count; i++)
+        {
+            map.WalkSegment(leg.Points[i - 1], leg.Points[i], (cell, enter, leave) =>
+            {
+                if (map.OwnerAt(cell) == country)
+                {
+                    total += Vector2.Distance(enter, leave);
+                }
+                return true;
+            });
+        }
+        return total;
+    }
+
+    [Fact]
+    public void SmoothingDoesNotCutAcrossACountryThePathWentAround()
+    {
+        const string notch =
+            "{\"width\":200,\"height\":100,\"entities\":["
+            + "{\"id\":\"AAA\",\"rings\":[[0,0,140,0,140,40,60,40,60,100,0,100]]},"
+            + "{\"id\":\"CCC\",\"rings\":[[60,40,140,40,140,100,60,100]]},"
+            + "{\"id\":\"BBB\",\"rings\":[[140,0,200,0,200,100,140,100]]}"
+            + "]}";
+        var map = TerritoryLoader.FromJson(notch);
+        var source = new Country(A, "Alpha", new Vector2(11, 81), 100, 100, Bloc.East, "L1");
+        var middle = new Country(C, "Charlie", new Vector2(101, 81), 100, 100, Bloc.NonAligned, "L1");
+        var target = new Country(B, "Bravo", new Vector2(189, 81), 100, 100, Bloc.West, "L1");
+        var network = new RouteNetwork(map, Array.Empty<Port>());
+        var route = network.Plan(TransportMode.Ground, source, target, new[] { source, middle, target }, Peaceful);
+        Assert.NotNull(route);
+        Assert.Equal(0, route!.Exposure);
+        Assert.True(LengthInside(map, route.Legs[0], C) < 0.1, "the straightened line entered Charlie");
+    }
+
+    [Theory]
+    [InlineData("PRK")]
+    [InlineData("VNM")]
+    [InlineData("PRC")]
+    public void TheSovietRunToItsPacificPortStaysOutOfChina(string receiver)
+    {
+        var state = DefaultScenario.Build(42).State;
+        var source = state.Countries.Get(new CountryId("USSR"));
+        var target = state.Countries.Get(new CountryId(receiver));
+        var route = state.Routes!.Plan(TransportMode.Naval, source, target, state.Countries.All, Peaceful);
+        Assert.NotNull(route);
+        Assert.Equal(UnitKind.Truck, route!.Legs[0].Carrier);
+        Assert.Equal(UnitKind.CargoShip, route.Legs[1].Carrier);
+        Assert.Equal(route.Legs[0].Points[^1], route.Legs[1].Points[0]);
+        var inChina = LengthInside(state.Territory!, route.Legs[0], new CountryId("PRC"));
+        Assert.True(inChina < 0.1, $"{inChina:0.0} units of the truck run are inside China");
+    }
+
     [Fact]
     public void ACountryWithoutAPortCannotShipByShip()
     {

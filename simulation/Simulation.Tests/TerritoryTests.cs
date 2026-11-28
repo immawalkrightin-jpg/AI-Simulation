@@ -208,7 +208,9 @@ public class TerritoryTests
                         && simulation.State.Occupations.HolderAt(unit.Position) == unit.Owner);
                 Assert.True(
                     legal,
-                    $"tick {simulation.State.Clock.Tick}: {unit.Owner.Value} {unit.Kind} at {unit.Position}");
+                    $"tick {simulation.State.Clock.Tick}: {unit.Owner.Value} {unit.Kind} at {unit.Position}"
+                    + $" ({unit.Status}, destination {unit.Destination}, owner of the ground {simulation.State.Territory!.OwnerAt(unit.Position)?.Value ?? "none"},"
+                    + $" held by {simulation.State.Occupations.HolderAt(unit.Position)?.Value ?? "nobody"})");
             }
         }
         var moved = simulation.State.Units.Count(u => u.Position != start[u.Id]);

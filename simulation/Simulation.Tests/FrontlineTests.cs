@@ -281,6 +281,89 @@ public class FrontlineTests
             u => Assert.True(state.Territory!.Permits(Domain.Land, A, u.Position), $"unit {u.Id} at {u.Position}"));
     }
 
+    private static WorldSimulation HeldGround()
+    {
+        var map = TerritoryLoader.FromJson(BorderJson);
+        var world = new WorldState(1, 200, 100) { Territory = map };
+        world.Countries.Add(new Country(A, "Alpha", new Vector2(50, 51), 300, 300, Bloc.East, "L1"));
+        world.Countries.Add(new Country(B, "Bravo", new Vector2(150, 51), 300, 300, Bloc.West, "L1"));
+        world.Relations.Set(A, B, -0.9);
+        world.Doctrine = new Doctrine(null, new[] { Front(Rung.Incident, Rung.Incident) });
+        world.Escalation = new EscalationLadder(world.Doctrine);
+        world.Occupations.Add(A, B, new Vector2(110, 51), 16, 0, "test");
+        return new WorldSimulation(
+            world,
+            new WorldActivityGenerator(dispatchUnits: false),
+            null,
+            new InteractionEngine(null, spawnChance: 0.0));
+    }
+
+    [Fact]
+    public void AUnitStillAtHomeIsHaltedWhenTheGroundItIsHeadingForIsHandedBack()
+    {
+        var simulation = HeldGround();
+        var state = simulation.State;
+        var gun = state.AddUnit(A, UnitKind.Artillery, new Vector2(95, 51));
+        simulation.Run(59);
+        Assert.True(state.TryOrderMove(gun, new Vector2(115, 51)));
+        simulation.Run(1);
+        Assert.Empty(state.Occupations.All);
+        Assert.Equal(UnitStatus.Idle, gun.Status);
+        simulation.Run(20);
+        Assert.True(state.Territory!.Permits(Domain.Land, A, gun.Position), $"gun at {gun.Position}");
+    }
+
+    [Fact]
+    public void AUnitCaughtOnReturnedGroundIsPulledHome()
+    {
+        var simulation = HeldGround();
+        var state = simulation.State;
+        var gun = state.AddUnit(A, UnitKind.Artillery, new Vector2(99, 51));
+        simulation.Run(59);
+        Assert.True(state.TryOrderMove(gun, new Vector2(115, 51)));
+        simulation.Run(1);
+        Assert.Empty(state.Occupations.All);
+        Assert.Equal(UnitStatus.Idle, gun.Status);
+        Assert.True(state.Territory!.Permits(Domain.Land, A, gun.Position), $"gun at {gun.Position}");
+    }
+
+    [Fact]
+    public void AWreckLeftOnReturnedGroundIsRecoveredByItsArmy()
+    {
+        var simulation = HeldGround();
+        var state = simulation.State;
+        var wreck = state.AddUnit(A, UnitKind.Tank, new Vector2(110, 51));
+        var hull = state.AddUnit(A, UnitKind.Tank, new Vector2(111, 51));
+        wreck.ApplyDamage(1000);
+        Assert.Equal(UnitStatus.Destroyed, wreck.Status);
+        Assert.False(state.Territory!.Permits(Domain.Land, A, wreck.Position));
+        simulation.Run(59);
+        Assert.NotEmpty(state.Occupations.All);
+        Assert.Equal(new Vector2(110, 51), wreck.Position);
+        simulation.Run(1);
+        Assert.Empty(state.Occupations.All);
+        Assert.Equal(UnitStatus.Destroyed, wreck.Status);
+        Assert.True(state.Territory!.Permits(Domain.Land, A, wreck.Position), $"wreck at {wreck.Position}");
+        Assert.True(state.Territory!.Permits(Domain.Land, A, hull.Position), $"tank at {hull.Position}");
+    }
+
+    [Fact]
+    public void AMarchAcrossSeizedGroundCannotCrossWater()
+    {
+        const string bay =
+            "{\"width\":20,\"height\":10,\"entities\":["
+            + "{\"id\":\"AAA\",\"rings\":[[0,0,8,0,8,10,0,10]]},"
+            + "{\"id\":\"BBB\",\"rings\":[[12,0,20,0,20,10,12,10]]}"
+            + "]}";
+        var world = new WorldState(1, 20, 10) { Territory = TerritoryLoader.FromJson(bay) };
+        world.Countries.Add(new Country(A, "Alpha", new Vector2(3, 5), 100, 100));
+        world.Countries.Add(new Country(B, "Bravo", new Vector2(17, 5), 100, 100));
+        world.Occupations.Add(A, B, new Vector2(10, 5), 6, 0, "test");
+        var garrison = world.AddUnit(A, UnitKind.Infantry, new Vector2(13, 5));
+        Assert.False(world.TryOrderMove(garrison, new Vector2(7, 5)));
+        Assert.True(world.TryOrderMove(garrison, new Vector2(15, 5)));
+    }
+
     [Fact]
     public void ConquestIsDeterministicForASeed()
     {
@@ -388,7 +471,11 @@ public class FrontlineTests
             var ambusher = world.AddUnit(A, UnitKind.Tank, new Vector2(98, 51));
             var victim = world.AddUnit(B, UnitKind.Tank, new Vector2(96, 51));
             ambusher.Conceal();
-            var simulation = new WorldSimulation(world, null, null, new InteractionEngine(null, spawnChance: 0.0));
+            var simulation = new WorldSimulation(
+                world,
+                new WorldActivityGenerator(dispatchUnits: false),
+                null,
+                new InteractionEngine(null, spawnChance: 0.0));
             simulation.Run(30);
             Assert.Contains(world.Log.Records, r => r.Kind == "ambush_sprung" && r.Description.Contains("because"));
             Assert.Equal(UnitStatus.Idle, ambusher.Status);

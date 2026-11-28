@@ -12,6 +12,9 @@ namespace Simulation.API.Scenarios;
 
 public static class DefaultScenario
 {
+    // This seed builds the historical set-up exactly. Every other seed builds a variation of it.
+    public const int HistoricalSeed = 42;
+
     private const float WorldWidth = 2000;
     private const float WorldHeight = 1000;
     private const string ModelId = "USSR";
@@ -329,14 +332,17 @@ public static class DefaultScenario
         var world = new WorldState(seed, WorldWidth, WorldHeight);
         world.Territory = TerritoryLoader.Shared;
         var territory = world.Territory;
+        var variation = seed == HistoricalSeed ? null : new ScenarioVariation(seed);
         foreach (var entry in Entries)
         {
+            var supplies = variation?.Stock(entry.Supplies) ?? entry.Supplies;
+            var ammunition = variation?.Stock(entry.Ammunition) ?? entry.Ammunition;
             world.Countries.Add(new Country(
                 new CountryId(entry.Id),
                 entry.Name,
                 Place(entry.Longitude, entry.Latitude),
-                entry.Supplies,
-                entry.Ammunition,
+                supplies,
+                ammunition,
                 entry.Bloc,
                 entry.Landmass));
         }
@@ -356,6 +362,20 @@ public static class DefaultScenario
         {
             world.Relations.Set(new CountryId(first), new CountryId(second), value);
         }
+        if (variation is not null)
+        {
+            var all = world.Countries.All;
+            for (var i = 0; i < all.Count; i++)
+            {
+                for (var j = i + 1; j < all.Count; j++)
+                {
+                    world.Relations.Set(
+                        all[i].Id,
+                        all[j].Id,
+                        variation.Relation(world.Relations.Get(all[i].Id, all[j].Id)));
+                }
+            }
+        }
 
         foreach (var entry in Entries)
         {
@@ -367,9 +387,12 @@ public static class DefaultScenario
                 Math.Min(MaxScatter, NearestCapitalDistance(entry) * ScatterShare) - Vector2.Distance(anchor, capital));
             var occurrences = new Dictionary<UnitKind, int>();
             var shipsAtPort = 0;
-            for (var k = 0; k < entry.Units.Length; k++)
+            var roster = variation?.Roster(entry.Units) ?? entry.Units;
+            var (turn, reach) = variation?.Deployment() ?? (0f, 1f);
+            var rotation = Matrix3x2.CreateRotation(turn);
+            for (var k = 0; k < roster.Length; k++)
             {
-                var kind = KindOf(entry.Units[k]);
+                var kind = KindOf(roster[k]);
                 if (kind is null)
                 {
                     continue;
@@ -389,7 +412,8 @@ public static class DefaultScenario
                         continue;
                     }
                     var shipSlot = shipsAtPort++;
-                    var nudge = new Vector2(shipSlot * 2.2f, (shipSlot % 2 == 0 ? 1f : -1f) * 1.4f);
+                    var nudge = new Vector2(shipSlot * 2.2f, (shipSlot % 2 == 0 ? 1f : -1f) * 1.4f)
+                        + (variation?.Anchorage() ?? Vector2.Zero);
                     position = Settle(territory, Domain.Sea, owner, berth.Value, nudge);
                 }
                 else
@@ -399,7 +423,7 @@ public static class DefaultScenario
                         kind.Value.DomainOf(),
                         owner,
                         anchor,
-                        ScatterOffset(kind.Value, occurrence, maxRadius));
+                        Vector2.Transform(ScatterOffset(kind.Value, occurrence, maxRadius), rotation) * reach);
                 }
                 world.AddUnit(owner, kind.Value, position);
             }

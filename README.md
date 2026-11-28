@@ -119,10 +119,14 @@ python -m http.server 5500
     - [x] Frontend: units in ambush show a dotted outline and a count in the dossier; frontline events read as hostile in the event strip
     - [x] Tests: zone severity and repair, creation, shipping block, secondary blasts, ownership change, garrison, hand-back, ambush, determinism, snapshot mapping, bare worlds unchanged
     - [x] Run `dotnet test` and `npm test` and look at the map in the browser (3 failed in .net, none in node)
-19. Randomized worlds and Window A verification
-    - [ ] Seeded variation of powers, stockpiles, relations and positions inside Cold War limits
-    - [ ] Default seed keeps the historical set-up
-    - [ ] Long-run invariant tests on default and randomized worlds
-    - [ ] Update architecture.md and frontend.md
+    - [x] Fix the 3 failures: ambush posting, ambush test dispatch, units stranded on returned ground
+    - [x] Fix route smoothing that cut across China on the Soviet run to Vladivostok
+    - [ ] Run `dotnet test` again
+19. Randomized worlds and Window A verification (in review)
+    - [x] Seeded variation of powers, stockpiles, relations and positions inside Cold War limits
+    - [x] Default seed keeps the historical set-up
+    - [x] Long-run invariant tests on default and randomized worlds
+    - [x] Update architecture.md and frontend.md
+    - [ ] Run `dotnet test` and `node --test`, check a reset world in the browser
 20. Frontend Window B AI map with confidence-typed markers
 21. Reinforcement learning loop

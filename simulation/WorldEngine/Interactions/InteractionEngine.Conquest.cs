@@ -114,45 +114,46 @@ public sealed partial class InteractionEngine
         var spread = 0;
         foreach (var unit in world.Units.Where(u =>
                      u.Owner == released.Holder
-                     && u.Status != UnitStatus.Destroyed
                      && u.Kind.DomainOf() == Domain.Land))
         {
+            var wreck = unit.Status == UnitStatus.Destroyed;
             var assigned = garrisons.TryGetValue(unit.Id, out var id) && id == released.Id;
             if (assigned)
             {
                 garrisons.Remove(unit.Id);
                 unit.Halt();
             }
-            if (territory is null
-                || !released.Contains(unit.Position)
-                || territory.Permits(Domain.Land, unit.Owner, unit.Position))
+            if (territory is null)
             {
                 continue;
             }
-            var home = territory.FindNearest(Domain.Land, released.Holder, released.Center, GarrisonSearch);
+            var standing = territory.Permits(Domain.Land, unit.Owner, unit.Position)
+                || (world.Occupations.HolderAt(unit.Position) == unit.Owner && !territory.IsSea(unit.Position));
+            if (standing)
+            {
+                // An order given while the ground was held may now lead onto ground that has been returned.
+                if (unit.Destination is { } goal && !world.HeldPath(unit.Owner, unit.Position, goal))
+                {
+                    unit.Halt();
+                }
+                continue;
+            }
+            var home = territory.FindNearest(Domain.Land, released.Holder, released.Center, GarrisonSearch)
+                ?? territory.FindNearest(Domain.Land, released.Holder, unit.Position, OccupationSearch);
             if (home is { } point)
             {
                 var spot = point + new Vector2(spread++ * 2.2f, 0);
-                unit.Relocate(territory.Permits(Domain.Land, unit.Owner, spot) ? spot : point);
+                var landing = territory.Permits(Domain.Land, unit.Owner, spot) ? spot : point;
+                if (wreck)
+                {
+                    unit.Recover(landing);
+                }
+                else
+                {
+                    unit.Relocate(landing);
+                }
             }
         }
-    }
-
-    private static bool ClearMarch(TerritoryMap territory, Unit unit, Occupation occupation, Vector2 target)
-    {
-        var length = Vector2.Distance(unit.Position, target);
-        var steps = Math.Max(1, (int)Math.Ceiling(length / (territory.CellSize * 0.25f)));
-        for (var s = 0; s <= steps; s++)
-        {
-            var point = Vector2.Lerp(unit.Position, target, s / (float)steps);
-            var ownLand = territory.Permits(Domain.Land, unit.Owner, point);
-            var heldLand = occupation.Contains(point) && !territory.IsSea(point);
-            if (!ownLand && !heldLand)
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     private void AdvanceGarrisons(WorldState world)
@@ -202,7 +203,7 @@ public sealed partial class InteractionEngine
                     && Vector2.Distance(u.Position, occupation.Center) <= GarrisonSearch)
                 .OrderBy(u => Vector2.DistanceSquared(u.Position, occupation.Center))
                 .ThenBy(u => u.Id)
-                .FirstOrDefault(u => ClearMarch(territory, u, occupation, target));
+                .FirstOrDefault(u => world.HeldPath(u.Owner, u.Position, target));
             if (candidate is null)
             {
                 continue;

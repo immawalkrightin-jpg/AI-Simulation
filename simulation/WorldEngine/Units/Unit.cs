@@ -88,6 +88,16 @@ public sealed class Unit
         Status = UnitStatus.Idle;
     }
 
+    // A wreck stays where it fell. When the army that held the ground withdraws, it takes its wrecks along,
+    // so no unit of any status is left lying on ground that has been handed back.
+    public void Recover(Vector2 point)
+    {
+        if (Status == UnitStatus.Destroyed)
+        {
+            Position = point;
+        }
+    }
+
     public void Step(double seconds)
     {
         if (Status != UnitStatus.Moving || Destination is null)

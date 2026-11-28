@@ -19,6 +19,9 @@ public sealed class RouteNetwork
     private const float AnchorSearch = 80f;
     private const float LandingSearch = 40f;
     private const float HarbourSearch = 40f;
+    private const int FreeGround = 64;
+    private const int CanalGround = 65;
+    private const float DetourTolerance = 0.01f;
 
     private enum Medium
     {
@@ -501,7 +504,8 @@ public sealed class RouteNetwork
         {
             var far = Math.Min(cells.Count - 1, at + SmoothLookahead);
             while (far > at + 1
-                && !LineClear(Center(cells[at]), Center(cells[far]), medium, own, target, blocked))
+                && !(LineClear(Center(cells[at]), Center(cells[far]), medium, own, target, blocked)
+                    && KeepsToPath(cells, at, far, medium, own, target)))
             {
                 far--;
             }
@@ -514,6 +518,70 @@ public sealed class RouteNetwork
         }
         return new PathResult(points.ToArray(), exposure);
     }
+
+    // Ground a straightened line must not take more of than the path it replaces: other countries' land,
+    // and for trucks also free land and canal crossings. Everything else is -1.
+    private int Detour(int index, Medium medium, short own, short target)
+    {
+        if (medium == Medium.Sea)
+        {
+            return -1;
+        }
+        if (kind[index] == 2)
+        {
+            return owner[index] == own || owner[index] == target ? -1 : owner[index];
+        }
+        if (medium != Medium.Land)
+        {
+            return -1;
+        }
+        if (kind[index] == 1)
+        {
+            return FreeGround;
+        }
+        return canalCell[index] ? CanalGround : -1;
+    }
+
+    // The search weighs foreign ground as expensive, so smoothing must respect that choice. A shortcut is
+    // refused when it spends more distance in any such ground than the cells it would replace.
+    private bool KeepsToPath(List<int> cells, int at, int far, Medium medium, short own, short target)
+    {
+        if (medium == Medium.Sea)
+        {
+            return true;
+        }
+        var allowance = new float[CanalGround + 1];
+        for (var k = at; k < far; k++)
+        {
+            var first = cells[k];
+            var second = cells[k + 1];
+            var diagonal = first % columns != second % columns && first / columns != second / columns;
+            var half = diagonal ? 0.7071f : 0.5f;
+            foreach (var cell in new[] { first, second })
+            {
+                var ground = Detour(cell, medium, own, target);
+                if (ground >= 0)
+                {
+                    allowance[ground] += half;
+                }
+            }
+        }
+        return map.WalkSegment(Center(cells[at]), Center(cells[far]), (cell, enter, leave) =>
+        {
+            var ground = Detour(Index(cell), medium, own, target);
+            if (ground < 0)
+            {
+                return true;
+            }
+            allowance[ground] -= Vector2.Distance(enter, leave) / cellSize;
+            return allowance[ground] >= -DetourTolerance;
+        });
+    }
+
+    // The truck run between a country's capital and its own port stays on home ground whenever it can.
+    private PathResult? HomeLeg(Vector2 from, Vector2 to, short own, ulong blocked) =>
+        FindPath(Medium.Land, from, to, own, own, ~(1UL << own))
+        ?? FindPath(Medium.Land, from, to, own, own, blocked);
 
     public double? SeaDistance(Vector2 from, Vector2 to)
     {
@@ -661,7 +729,7 @@ public sealed class RouteNetwork
                 continue;
             }
 
-            var outbound = FindPath(Medium.Land, from, landingOut.Value, own, own, blocked);
+            var outbound = HomeLeg(from, landingOut.Value, own, blocked);
             if (outbound is null)
             {
                 continue;
@@ -680,7 +748,7 @@ public sealed class RouteNetwork
             }
             legs.Add(ship);
 
-            var onward = FindPath(Medium.Land, landingIn.Value, to, other, other, blocked);
+            var onward = HomeLeg(landingIn.Value, to, other, blocked);
             if (onward is not null)
             {
                 var truckIn = Leg(UnitKind.Truck, Join(new[] { targetPort.Berth }, onward.Points));

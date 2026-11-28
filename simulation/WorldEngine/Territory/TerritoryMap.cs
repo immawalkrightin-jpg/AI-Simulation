@@ -60,7 +60,12 @@ public sealed class TerritoryMap
     public bool Permits(Domain domain, CountryId owner, Vector2 point) =>
         Contains(point) && Allows(cells[IndexOf(point)], domain, owner);
 
-    public bool SegmentPermits(Domain domain, CountryId owner, Vector2 from, Vector2 to)
+    public bool SegmentPermits(Domain domain, CountryId owner, Vector2 from, Vector2 to) =>
+        WalkSegment(from, to, (cell, _, _) => Permits(domain, owner, cell));
+
+    // Visits every cell a straight path crosses. The visitor gets the centre of the cell and the stretch of
+    // the path inside it. Returns false as soon as the visitor refuses a cell, or when an end is off the map.
+    public bool WalkSegment(Vector2 from, Vector2 to, Func<Vector2, Vector2, Vector2, bool> visit)
     {
         if (!Contains(from) || !Contains(to))
         {
@@ -83,16 +88,22 @@ public sealed class TerritoryMap
         var strideX = stepX == 0 ? double.PositiveInfinity : stepX / deltaX;
         var strideY = stepY == 0 ? double.PositiveInfinity : stepY / deltaY;
         var budget = Math.Abs(endX - x) + Math.Abs(endY - y) + 1;
+        var entered = 0.0;
+        Vector2 Along(double share) => share >= 1.0 ? to : Vector2.Lerp(from, to, (float)share);
+        Vector2 CentreOf(int column, int row) => new((column + 0.5f) * CellSize, (row + 0.5f) * CellSize);
         for (var i = 0; i <= budget; i++)
         {
-            if (!Allows(cells[y * Columns + x], domain, owner))
+            var last = x == endX && y == endY;
+            var left = last ? 1.0 : Math.Min(1.0, Math.Min(nextX, nextY));
+            if (!visit(CentreOf(x, y), Along(entered), Along(left)))
             {
                 return false;
             }
-            if (x == endX && y == endY)
+            if (last)
             {
                 return true;
             }
+            entered = left;
             if (nextX < nextY)
             {
                 x = Math.Clamp(x + stepX, 0, Columns - 1);
@@ -104,7 +115,7 @@ public sealed class TerritoryMap
                 nextY += strideY;
             }
         }
-        return Allows(cells[endY * Columns + endX], domain, owner);
+        return visit(CentreOf(endX, endY), Along(entered), to);
     }
 
     public Vector2? FindNearest(Domain domain, CountryId owner, Vector2 origin, float maxDistance)

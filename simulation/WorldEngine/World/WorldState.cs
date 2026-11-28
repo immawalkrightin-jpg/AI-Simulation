@@ -71,8 +71,22 @@ public sealed class WorldState
     public Vector2 RandomPoint() =>
         new((float)(Rng.NextDouble() * Width), (float)(Rng.NextDouble() * Height));
 
+    // Whether a land unit of this country can march the whole straight line using only its own land and
+    // ground its country holds. Held ground never includes water.
+    public bool HeldPath(CountryId owner, Vector2 from, Vector2 to)
+    {
+        if (Territory is not { } map)
+        {
+            return true;
+        }
+        return map.WalkSegment(from, to, (cell, enter, leave) =>
+            map.Permits(Domain.Land, owner, cell)
+            || (!map.IsSea(cell)
+                && Occupations.All.Any(o => o.Holder == owner && o.Contains(enter) && o.Contains(leave))));
+    }
+
     // A unit lying in ambush holds its ground. A unit in a paralyzed patch of its own country cannot move.
-    // Land units never march onto ground an enemy holds, and a garrison stays inside the patch it holds.
+    // Land units never march onto ground an enemy holds, and a garrison on seized ground stays inside it.
     public bool CanMove(Unit unit, Vector2 destination)
     {
         if (unit.Status == UnitStatus.Ambushing)
@@ -99,7 +113,14 @@ public sealed class WorldState
             }
             if (here == unit.Owner)
             {
-                return there == unit.Owner;
+                if (there == unit.Owner)
+                {
+                    return HeldPath(unit.Owner, unit.Position, destination);
+                }
+                if (!Territory.Permits(Domain.Land, unit.Owner, unit.Position))
+                {
+                    return false;
+                }
             }
         }
         return Territory.SegmentPermits(domain, unit.Owner, unit.Position, destination);

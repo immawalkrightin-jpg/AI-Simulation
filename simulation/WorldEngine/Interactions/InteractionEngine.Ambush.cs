@@ -79,34 +79,36 @@ public sealed partial class InteractionEngine
         {
             return;
         }
-        var candidate = world.Units
+        var candidates = world.Units
             .Where(u => u.Owner == own.Id
                 && u.Status == UnitStatus.Idle
                 && AmbushRules.CanAmbush(u.Kind)
-                && !posting.ContainsKey(u.Id))
+                && !posting.ContainsKey(u.Id)
+                && !garrisons.ContainsKey(u.Id)
+                && territory.Permits(Domain.Land, own.Id, u.Position))
             .OrderBy(u => Vector2.DistanceSquared(u.Position, rival.Capital))
             .ThenBy(u => u.Id)
-            .FirstOrDefault();
-        if (candidate is null)
+            .ToList();
+        foreach (var candidate in candidates)
         {
+            if (territory.FindNearest(Domain.Land, rival.Id, candidate.Position, AmbushSearch) is not { } edge)
+            {
+                continue;
+            }
+            var away = candidate.Position - edge;
+            var length = away.Length();
+            if (length < 1e-3f)
+            {
+                continue;
+            }
+            var post = edge + away / length * (territory.CellSize * 1.5f);
+            if (!territory.Permits(Domain.Land, own.Id, post) || !world.TryOrderMove(candidate, post))
+            {
+                continue;
+            }
+            posting[candidate.Id] = (tick, post, rival.Id);
             return;
         }
-        if (territory.FindNearest(Domain.Land, rival.Id, candidate.Position, AmbushSearch) is not { } edge)
-        {
-            return;
-        }
-        var away = candidate.Position - edge;
-        var length = away.Length();
-        if (length < 1e-3f)
-        {
-            return;
-        }
-        var post = edge + away / length * (territory.CellSize * 1.5f);
-        if (!territory.Permits(Domain.Land, own.Id, post) || !world.TryOrderMove(candidate, post))
-        {
-            return;
-        }
-        posting[candidate.Id] = (tick, post, rival.Id);
     }
 
     // Units that have reached their post take cover. Units that were sent elsewhere, destroyed or took
